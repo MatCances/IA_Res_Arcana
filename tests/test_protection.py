@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import patch
-from cards.objects import Shield
+from cards.objects import Protection
 from game.game_state import GameState
 from game.player import Player
 from utils.constant import Resource, GameEvent
@@ -11,7 +11,7 @@ def setup():
     player1 = Player("Alice")
     player2 = Player("Bob")
     state = GameState([player1, player2])
-    shield = Shield()
+    shield = Protection()
     player1.board.append(shield)
     return state, player1, player2, shield
 
