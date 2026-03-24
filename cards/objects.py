@@ -72,7 +72,7 @@ class Alchemy(Obj):
         return abilities
 
 
-class Shield(Obj):
+class Protection(Obj):
     def __init__(self):
         super().__init__("Protection")
     
