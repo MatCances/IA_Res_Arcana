@@ -80,4 +80,31 @@ class Illusionist(Mage):
         return super().get_abilities()
 
 
-ALL_MAGES = [Alchemist(), Necromancer(), Nautilian(), Illusionist()]
+class Erudite(Mage):
+    def __init__(self):
+        super().__init__(name="Erudite")
+    
+    def get_abilities(self):
+        def effect(state, player):
+            if not player.deck:
+                print(f"{player.name} n'a plus de cartes dans sa pioche.")
+                return
+            
+            resource = choose_resource(player.resources.available())
+            player.resources.remove(resource, 1)
+            
+            card = player.deck.pop(0)
+            player.hand.append(card)
+            print(f"{player.name} pioche {card.name}")
+            self.tap()
+        
+        return [Ability("1 ressource au choix pour piocher une carte", cost={Resource.ANY: 1}, effect=effect)]
+
+        
+
+
+ALL_MAGES = [Alchemist(),
+             Necromancer(),
+             Nautilian(),
+             Illusionist(),
+             Erudite()]

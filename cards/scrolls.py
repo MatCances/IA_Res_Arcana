@@ -10,7 +10,7 @@ class Scroll(Card):
 
 class Vitality(Scroll):
     def __init__(self):
-        super().__init__("Vitalité", cost={Resource.ELAN: 2})
+        super().__init__("Vitalité", cost={})
     
     def get_abilities(self):
         def effect(state, player):
@@ -23,7 +23,7 @@ class Vitality(Scroll):
             card = choose_card(tapped)
             card.untap()
             print(f"{card.name} est désengagée.")
-            
+            player.resources.remove(Resource.ELAN, 2)
             player.board.remove(self)
             state.engine.available_scrolls.append(self)
         
@@ -81,7 +81,7 @@ class Projection(Scroll):
     def get_abilities(self):
         def effect(state, player):
             print("Choisissez une ressource à payer :")
-            resource = choose_resource(player.resources.available(excluded={Resource.PEARL}))
+            resource = choose_resource(player.resources.available(excluded={Resource.PEARL, Resource.GOLD}))
             
             max_x = player.resources.resources[resource] // 3
             if max_x == 0:
@@ -148,7 +148,7 @@ class Destruction(Scroll):
             print(f"{card.name} est détruit.")
             
             # recevoir autant de ressources que le coût total
-            excluded = {Resource.PEARL}
+            excluded = {Resource.PEARL, Resource.GOLD}
             choices = [r for r in Resource.real() if r not in excluded]
             print(f"Choisissez {total} ressource(s) à recevoir :")
             for _ in range(total):
@@ -201,7 +201,7 @@ class Transformation(Scroll):
                     pass
             
             print("Choisissez la ressource à recevoir :")
-            excluded = {Resource.PEARL}
+            excluded = {Resource.PEARL, Resource.GOLD}
             choices = [r for r in Resource.real() if r not in excluded]
             resource_in = choose_resource(choices)
             
