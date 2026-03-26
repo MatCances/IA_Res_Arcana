@@ -22,8 +22,10 @@ class Obelisc(Monument):
     
     def on_buy(self, state, player):
         print(f"{player.name}, choisissez 6 ressources :")
+        excluded = {Resource.GOLD, Resource.PEARL}
+        choices = [r for r in Resource.real() if r not in excluded]
         for _ in range(6):
-            resource = choose_resource(list(Resource))
+            resource = choose_resource(choices)
             player.resources.add(resource, 1)
     
     def score(self, state, player):
@@ -140,16 +142,15 @@ class Laboratory(Monument):
 
 class Pyramid(Monument):
     def __init__(self):
-        super().__init__("Pyramid")
+        super().__init__("Pyramide")
     
-
     def score(self, state, player):
         return 3
 
 
 class DemonicWorkshop(Monument):
     def __init__(self):
-        super().__init__("Demonic Workshop")
+        super().__init__("Atelier Démoniaque")
     
     def collect_base(self, state, player):
         print(f"{player.name}, choisissez une ressource à collecter (Elan / Death) :")
@@ -169,7 +170,7 @@ class DemonicWorkshop(Monument):
             print(f"{card.name} est désengagée.")
             self.tap()
         
-        return [Ability("Désengager une carte du plateau", cost={Resource.GOLD: 1}, effect=effect)]
+        return [Ability("Désengager une carte du plateau pour 1 GOLD", cost={Resource.GOLD: 1}, effect=effect)]
     
     def score(self, state, player):
         return 1
@@ -405,7 +406,7 @@ class ImpiousCathedral(Monument):
             owner = next((p for p in state.players if self in p.board), None)
             if owner is None:
                 return
-            demons = [card for card in owner.board if hasattr(card, 'card_type') and card.card_type == CardType.DEMON and not card.is_tapped]
+            demons = [card for card in owner.board if hasattr(card, 'card_type') and card.card_type in {CardType.DEMON, CardType.ILLUSIONIST} and not card.is_tapped]
             if not demons:
                 return
             print(f"\n[Réaction] {owner.name} : voulez-vous activer la Cathédrale Impie ? (s'engage + engage un démon pour +1 point)")
@@ -452,7 +453,10 @@ class SacredStatue(Monument):
                     pass
             if choice == 1:
                 owner.resources.remove(Resource.GOLD, 3)
-                owner.points += 3
+                print("owner.points: (avant)", owner.points)
+                owner.bonus_points += 3
+                print("OUUUUAIII ca passe par le on_event de sacred statue")
+                print("owner.points: (apres)", owner.points)
                 self.tap()
                 print(f"[Réaction] Statue Sacrée : -3 GOLD, +3 points !")
     

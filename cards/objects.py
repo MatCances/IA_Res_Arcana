@@ -1,5 +1,5 @@
 from cards.base_card import Card
-from utils.constant import Resource, GameEvent
+from utils.constant import Resource, GameEvent, CardType
 from cli.input_handler import choose_resource, choose_card
 from game.action import Action
 from game.ability import Ability
@@ -171,6 +171,12 @@ class Transmutation(Obj):
         return [Ability("3 ressources pour 3 ressources (sauf gold et pearl)", cost={Resource.ANY: 3}, effect=effect)]
 
 
+class Illusion(Obj):
+    def __init__(self):
+        super().__init__("Illusion")
+        self.card_type = CardType.ILLUSIONIST
+
+
 class Calcination(Obj):
     def __init__(self):
         super().__init__("Calcination")
@@ -222,4 +228,5 @@ ALL_OBJECTS = [CalmElan(),
                Research(),
                Transmutation(),
                Calcination(),
-               Inscription()]
+               Inscription(),
+               Illusion()]

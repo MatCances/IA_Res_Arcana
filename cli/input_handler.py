@@ -2,7 +2,9 @@ from game.action import (action_pass,
                          action_discard,
                          action_play_artifact,
                          action_use_ability,
-                         action_buy_monument)
+                         action_buy_monument,
+                         action_buy_monument_from_deck,
+                         action_buy_place_of_power)
 
 def choose_resource(choices):
     """Demande au joueur de choisir une ressource parmi une liste.
@@ -76,7 +78,7 @@ def available_actions(state, player, dispatch=None):
     actions = []
 
     # utiliser le pouvoir d'une carte non engagée
-    for card in [player.mage] + player.board:
+    for card in player.board:
         if not card.is_tapped:
             for ability in card.get_abilities():
                 if player.can_afford(ability):
@@ -86,16 +88,25 @@ def available_actions(state, player, dispatch=None):
     for card in player.hand:
         if player.can_buy(card):
             actions.append(action_play_artifact(state, player, card))
+    
+    # acheter un lieu de puissance
+    for place in state.places_of_power:
+        if player.can_buy(place):
+            actions.append(action_buy_place_of_power(state, player, place, dispatch=dispatch))
 
     # défausser une carte
     for card in player.hand:
         actions.append(action_discard(state, player, card))
     
-    # acheter un monument
-    for monument in state.monuments:
+    # acheter un monument visible
+    for monument in state.monuments_visible:
         if player.can_buy(monument):
             actions.append(action_buy_monument(state, player, monument, dispatch=dispatch))
 
+    # Acheter le monument sur la pioche des monuments
+    if state.monuments_deck:
+        actions.append(action_buy_monument_from_deck(state, player, dispatch=dispatch))
+    
     # toujours disponible
     actions.append(action_pass(state, player))
 

@@ -1,5 +1,5 @@
 from cards.base_card import Card
-from utils.constant import Resource, CardType
+from utils.constant import Resource, CardType, GameEvent
 from game.ability import Ability
 from cli.input_handler import choose_resource, choose_card
 
@@ -9,7 +9,7 @@ class Artifact(Card):
         super().__init__(name, cost=cost, card_type=card_type)
     
     def play(self, state, player):
-        """Vérifie le coût et applique l'ability"""
+        """Vérifie le coût et pose la carte sur le plateau"""
         if not player.can_buy(self):
             print(f" ! Pas assez de ressources pour jouer {self.name} !")
             return False
@@ -43,15 +43,15 @@ class Artifact(Card):
         else:
             print("Choisissez 2 ressources :")
             for _ in range(2):
-                resource = choose_resource([r for r in Resource.real() if r != Resource.PEARL])
+                resource = choose_resource([r for r in Resource.real() if r not in {Resource.PEARL, Resource.GOLD}])
                 player.resources.add(resource, 1)
             print("Vous recevez 2 ressources")
 
 class Phoenix(Artifact):
     def __init__(self):
-        name = "Phoenix"
+        name = "Phénix"
         cost = {Resource.ELAN: 3, Resource.LIFE: 1}
-        super().__init__(name, cost)
+        super().__init__(name, cost, card_type=CardType.CREATURE)
     
     def get_abilities(self):
         def effect(state, player):
@@ -63,7 +63,7 @@ class Phoenix(Artifact):
 
 class Prism(Artifact):
     def __init__(self):
-        name = "Prism"
+        name = "Prisme"
         cost = {}
         super().__init__(name, cost)
     
@@ -99,7 +99,7 @@ class Prism(Artifact):
 
 class LightFlask(Artifact):
     def __init__(self):
-        name = "Light flask"
+        name = "Flasque de lumière"
         cost = {}
         super().__init__(name, cost)
     
@@ -116,7 +116,7 @@ class LightFlask(Artifact):
 
 class PlanarShadow(Artifact):
     def __init__(self):
-        name = "Planar shadow"
+        name = "Ombre planaire"
         cost = {Resource.CALM: 2, Resource.DEATH: 2}
         super().__init__(name, cost)
     
@@ -154,7 +154,7 @@ class PlanarShadow(Artifact):
 
 class DwarvenDraw(Artifact):
     def __init__(self):
-        name = "Dwarven draw"
+        name = "Pioche des nains"
         cost = {Resource.ELAN: 1}
         super().__init__(name, cost)
     
@@ -169,14 +169,16 @@ class DwarvenDraw(Artifact):
 
 class ElementaryShard(Artifact):
     def __init__(self):
-        name = "Elementary shard"
+        name = "Eclat elementaire"
         cost = {}
         super().__init__(name, cost)
     
     def get_abilities(self):
         def effect(state, player):
             print("Choisissez une ressource à produire :")
-            resource = choose_resource([r for r in Resource.real() if r != Resource.PEARL])
+            excluded = {Resource.GOLD, Resource.PEARL}
+            choices = [r for r in Resource.real() if r not in excluded]
+            resource = choose_resource(choices)
             player.resources.add(resource, 1)
             self.tap()
 
@@ -185,9 +187,12 @@ class ElementaryShard(Artifact):
 
 class CalciferWell(Artifact):
     def __init__(self):
-        name = "Calcifer well"
+        name = "Puit Calcifère"
         cost = {Resource.ELAN: 2}
         super().__init__(name, cost)
+    
+    def collect_base(self, state, player):
+        player.resources.add(Resource.ELAN, 1)
     
     def get_abilities(self):
         def effect(state, player):
@@ -202,7 +207,7 @@ class CalciferWell(Artifact):
 
 class BoneDragon(Artifact):
     def __init__(self):
-        super().__init__("Bone Dragon",
+        super().__init__("Dragon d'os",
                          cost={Resource.DEATH: 4, Resource.LIFE: 1},
                          card_type=CardType.DRAGON)
     
@@ -236,6 +241,72 @@ class BoneDragon(Artifact):
         
         return [Ability("Attaquer tous les adversaires (2 dégâts)", cost={}, effect=effect)]
 
+
+class ElementarySource(Artifact):
+    def __init__(self):
+        name = "Source Elementaire"
+        cost = {Resource.ELAN: 2, Resource.LIFE: 1, Resource.CALM: 1}
+        super().__init__(name, cost)
+    
+    def collect_base(self, state, player):
+        player.resources.add(Resource.LIFE, 1)
+        player.resources.add(Resource.ELAN, 1)
+        player.resources.add(Resource.CALM, 1)
+    
+    def on_event(self, event, state, source_player, **kwargs):
+        if event == GameEvent.ATTACK and not self.is_tapped:
+            owner = next(p for p in state.players if self in p.board)
+            if source_player != owner:
+                return
+            if not owner.resources.has(Resource.CALM, 1):
+                return
+            print(f"\n[Réaction] {owner.name} : voulez-vous activer la Grande Muraille ? (1 ELAN, s'engage)")
+            print("1 - Oui")
+            print("2 - Non")
+            choice = 0
+            while choice not in [1, 2]:
+                try:
+                    choice = int(input("Votre choix : "))
+                except ValueError:
+                    pass
+            if choice == 1:
+                owner.resources.remove(Resource.CALM, 1)
+                kwargs.get('context')['cancelled'] = True
+                print(f"[Réaction] Grande Muraille : attaque annulée !")
+
+
+class Siren(Artifact):
+    def __init__(self):
+        name = "Sirene"
+        cost = {Resource.CALM: 2, Resource.LIFE: 2}
+        card_type = CardType.CREATURE
+        super().__init__(name, cost, card_type)
+    
+    def collect_base(self, state, player):
+        player.resources.add(Resource.CALM, 1)
+    
+    def get_abilities(self):
+        def effect(state, player):
+            if not player.resources.available():
+                print("Vous n'avez aucune ressource à payer.")
+                return
+            
+            excluded = {Resource.PEARL, Resource.DEATH, Resource.ELAN}
+            print("Choisissez une ressource à payer :")
+            resource = choose_resource(player.resources.available(excluded))
+            player.resources.remove(resource, 1)
+
+            if not player.board:
+                print("Vous n'avez aucune carte sur le plateau.")
+                return
+            
+            print("Choisissez une carte sur laquelle poser la ressource :")
+            card = choose_card(player.board)
+            card.resources_on.add(resource, 1)
+            print(f"{resource.value} posé sur {card.name}")
+            self.tap()
+        return [Ability("Placer une ressource sur une carte", {Resource.ANY: 1}, effect=effect)]
+
 def make_artifacts():
     return [Phoenix(),
             Prism(),
@@ -244,6 +315,8 @@ def make_artifacts():
             DwarvenDraw(),
             ElementaryShard(),
             CalciferWell(),
-            BoneDragon()]
+            BoneDragon(),
+            ElementarySource(),
+            Siren()]
 
-ALL_ARTIFACTS = make_artifacts() + make_artifacts() + make_artifacts()
+ALL_ARTIFACTS = make_artifacts() + make_artifacts()

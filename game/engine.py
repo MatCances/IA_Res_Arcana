@@ -24,6 +24,8 @@ class Engine:
         self.available_places_of_power = places_of_power
         self.available_objects = objects
         self.available_scrolls = scrolls
+        self.game_over = False
+        self.winner = None
         self.first_player_tile = None
     
     def setup(self):
@@ -43,13 +45,16 @@ class Engine:
     
     def _setup_board(self):
         self.state.places_of_power = rd.sample(self.available_places_of_power, 4)
-        self.state.monuments = rd.sample(self.available_monuments, 7)
+        monuments_pool = rd.sample(self.available_monuments, 7)
+        # Les 2 premier monuments face visibles
+        self.state.monuments_visible = monuments_pool[:2]
+        self.state.monuments_deck = monuments_pool[2:]
         print("\n+===== MISE EN PLACE =====")
         print("Lieux de pouvoir :")
         for p in self.state.places_of_power:
             print(f"  - {p.name}")
         print("Monuments disponibles :")
-        for m in self.state.monuments:
+        for m in self.state.monuments_visible:
             print(f"  - {m.name}")
     
     def _deal_mage_choices(self):
@@ -122,7 +127,9 @@ class Engine:
                     choice = int(input("Numéro du mage : "))
                 except ValueError:
                     pass
-            player.set_mage(player.mage_choices[choice - 1])
+            chosen_mage = player.mage_choices[choice - 1]
+            player.set_mage(chosen_mage)
+            player.board.append(chosen_mage)
             print(f"{player.name} choisit {player.mage.name}")
     
     def _choose_objects(self):
@@ -158,7 +165,7 @@ class Engine:
             **kwargs: données supplémentaires selon l'événement
         """
         for player in self.state.players:
-            for card in [player.mage] + player.board:
+            for card in player.board:
                 card.on_event(event, self.state, source_player, **kwargs)
     
     def resolve_attack(self, target, damage):
@@ -217,11 +224,11 @@ class Engine:
         for player in self.state.players:
             print(f"\n--- {player.name} ---")
             # collecte fixe de toutes les cartes
-            for card in [player.mage] + player.board:
+            for card in player.board:
                 card.collect(self.state, player)
 
             # collecte des ressources posées sur les cartes (tout ou rien)
-            for card in [player.mage] + player.board:
+            for card in player.board:
                 stored = {r: a for r, a in card.resources_on.resources.items() if a > 0}
                 if not stored:
                     continue
@@ -241,7 +248,9 @@ class Engine:
     
     def action_phase(self):
         """Étape 2 : les joueurs jouent chacun leur tour jusqu'à ce que tout le monde passe."""
-        print("\n+===== PHASE D'ACTIONS =====")
+        print("\n+===========================")
+        print("+===== PHASE D'ACTIONS =====")
+        print("+===========================")
         passed = {player: False for player in self.state.players}
         first_to_pass = None
 
@@ -250,8 +259,11 @@ class Engine:
                 if passed[player]:
                     continue
 
-                print(f"\nTour de {player.name}")
+                if self.game_over:
+                    return
+
                 display_state(self.state)
+                print(f"\n --> Tour de {player.name}")
 
                 actions = available_actions(self.state, player, dispatch=self.dispatch_event)
                 action = choose_action(actions)
@@ -317,36 +329,46 @@ class Engine:
     def victory_check(self):
         """Étape 3 : vérifie si un joueur a atteint 13 points."""
         self.dispatch_event(GameEvent.VICTORY_CHECK, None)
+        
         for player in self.state.players:
-            player.points = self._compute_score(player)
-            print(f"{player.name} : {player.points} points")
-            if player.points >= WINNING_SCORE:
-                return player
-        return None
-    
-    def _compute_score(self, player):
-        score = player.points
-        score += player.resources.resources[Resource.PEARL]
-        for card in player.board:
-            if hasattr(card, 'score'):
-                score += card.score(self.state, player)
-        return score
+            points = player.points
+            print(f"{player.name} : {points} points")
+        
+        max_score = max(p.points for p in self.state.players)
+        
+        print(f"max score dans victory check: {max_score}")
+        if max_score < WINNING_SCORE:
+            # On retire les points bonus de tous les joueurs si moins de 13
+            for p in self.state.players:
+                p.bonus_points = 0
+            return None
+        
+        winners = [p for p in self.state.players if p.points == max_score]
+        
+        if len(winners) > 1:
+            print("Égalité ! Match nul.")
+            return "draw"
+        
+        winner = winners[0]
+        print(f"\n {winner.name} gagne la partie !")
+        return winner
 
     def untap_all(self):
         """Désengage toutes les cartes de tous les joueurs."""
         for player in self.state.players:
-            for card in [player.mage] + player.board:
+            for card in player.board:
                 card.untap()
     
     def run(self):
         self.setup()
         while True:
-            self.state.turn += 1
             print(f"\n+===== MANCHE {self.state.turn} =====")
             self.collect_phase()
             self.action_phase()
+            if self.game_over:
+                break
             self.untap_all()
             winner = self.victory_check()
             if winner:
-                print(f"\n {winner.name} gagne la partie !")
                 break
+            self.state.turn += 1

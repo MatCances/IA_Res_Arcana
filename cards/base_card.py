@@ -39,6 +39,9 @@ class Card:
         """Point de la carte en fonction de l'état du jeu"""
         return 0
     
+    def get_discount(self, card):
+        return {}
+    
     def on_event(self, event, state, source_player, **kwargs):
         """Réaction à un événement du jeu.
         

@@ -21,8 +21,9 @@ def test_activation_victoire(setup):
     state, player, statue = setup
     with patch('builtins.input', return_value='1'):
         statue.on_event(GameEvent.VICTORY_CHECK, state, player)
+    print("pearl de player dans test sacred statue: ", player.resources.resources[Resource.PEARL])
     assert player.resources.resources[Resource.GOLD] == 2
-    assert player.points == 3
+    assert player.points == 3 + 1  # Le point de la statue aussi
     assert statue.is_tapped == True
 
 
@@ -32,7 +33,7 @@ def test_refus_activation(setup):
     with patch('builtins.input', return_value='2'):
         statue.on_event(GameEvent.VICTORY_CHECK, state, player)
     assert player.resources.resources[Resource.GOLD] == 5
-    assert player.points == 0
+    assert player.points == 1
     assert statue.is_tapped == False
 
 
@@ -43,7 +44,7 @@ def test_pas_assez_gold(setup):
     with patch('builtins.input', return_value='1') as mock_input:
         statue.on_event(GameEvent.VICTORY_CHECK, state, player)
     mock_input.assert_not_called()
-    assert player.points == 0
+    assert player.points == 1
     assert statue.is_tapped == False
 
 
@@ -54,7 +55,7 @@ def test_deja_engagee(setup):
     with patch('builtins.input', return_value='1') as mock_input:
         statue.on_event(GameEvent.VICTORY_CHECK, state, player)
     mock_input.assert_not_called()
-    assert player.points == 0
+    assert player.points == 1
 
 
 def test_autre_evenement(setup):
@@ -63,7 +64,7 @@ def test_autre_evenement(setup):
     with patch('builtins.input', return_value='1') as mock_input:
         statue.on_event(GameEvent.BUY_MONUMENT, state, player)
     mock_input.assert_not_called()
-    assert player.points == 0
+    assert player.points == 1
     assert statue.is_tapped == False
 
 

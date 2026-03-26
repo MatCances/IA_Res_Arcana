@@ -17,6 +17,7 @@ class Resource(Enum):
 
 class GameEvent(Enum):
     BUY_MONUMENT = "buy_monument"
+    BUY_PLACE_OF_POWER = "buy_place_of_power"
     PLAY_ARTIFACT = "play_artifact"
     DISCARD_CARD = "discard_card"
     ATTACK = "attack"
@@ -28,3 +29,4 @@ class CardType(Enum):
     DRAGON = "dragon"
     CREATURE = "creature"
     DEMON = "demon"
+    ILLUSIONIST = "illusionist"
