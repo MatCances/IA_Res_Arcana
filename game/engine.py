@@ -223,9 +223,6 @@ class Engine:
         print("\n+===== PHASE DE COLLECTE =====")
         for player in self.state.players:
             print(f"\n--- {player.name} ---")
-            # collecte fixe de toutes les cartes
-            for card in player.board:
-                card.collect(self.state, player)
 
             # collecte des ressources posées sur les cartes (tout ou rien)
             for card in player.board:
@@ -245,6 +242,10 @@ class Engine:
                         player.resources.add(r, a)
                         card.resources_on.remove(r, a)
                     print("Ressources récupérées.")
+        
+            # collecte fixe de toutes les cartes
+            for card in player.board:
+                card.collect_base(self.state, player)
     
     def action_phase(self):
         """Étape 2 : les joueurs jouent chacun leur tour jusqu'à ce que tout le monde passe."""

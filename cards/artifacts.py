@@ -14,6 +14,9 @@ class Artifact(Card):
             print(f" ! Pas assez de ressources pour jouer {self.name} !")
             return False
         # retirer le coût
+        # TODO: ici si le cout de la carte est réduit, il faut faire comme le pouvoir
+        # de la draconniste: laisser choisir le joueur les ressources qu'il paye
+        # Limite déplacer la mécanique identique au pouvoir de la draconniste ici.
         for r, amount in self.cost.items():
             player.resources.remove(r, amount)
 
@@ -275,6 +278,64 @@ class ElementarySource(Artifact):
                 print(f"[Réaction] Grande Muraille : attaque annulée !")
 
 
+class ElvishBow(Artifact):
+    def __init__(self):
+        super().__init__(
+            name="Arc Elfique",
+            cost={Resource.ELAN: 2, Resource.LIFE: 1},
+            card_type=CardType.NONE
+        )
+
+    def get_abilities(self):
+        def effect1(state, player):
+            targets = [p for p in state.players if p != player]
+            for target in targets:
+                state.engine.resolve_attack(target, damage=1)
+            self.tap()
+
+        def effect2(state, player):
+            if player.deck:
+                card = player.deck.pop(0)
+                player.hand.append(card)
+                print(f"{player.name} pioche {card.name}")
+            else:
+                print(f"{player.name} n'a plus de cartes dans sa pioche.")
+            self.tap()
+
+        return [
+            Ability("Attaquer tous les adversaires (1 dégât)", cost={}, effect=effect1),
+            Ability("Piocher une carte", cost={}, effect=effect2)
+        ]
+
+
+class Automate(Artifact):
+    def __init__(self):
+        super().__init__(name="Automate",
+                         cost={Resource.GOLD: 1,
+                               Resource.ELAN: 1,
+                               Resource.LIFE: 1,
+                               Resource.CALM: 1})
+
+    def collect_base(self, state, player):        
+        for res in self.resources_on.available():
+            self.resources_on.add(res, 2)
+
+    def get_abilities(self):
+        def effect(state, player):
+            print("Choisissez une ressource à mettre sur l'automate: ")
+            resource = choose_resource(player.resources.available())
+            self.resources_on.add(resource, 1)
+            player.resources.remove(resource, 1)
+            self.tap()
+            print(f"{player.name} pose {resource.value} sur l'Automate")
+
+        abilities = [Ability("Poser une ressource sur l'Automate",
+                             cost={Resource.ANY: 1},
+                             effect=effect)]
+        return abilities
+
+    
+
 class Siren(Artifact):
     def __init__(self):
         name = "Sirene"
@@ -343,6 +404,8 @@ def make_artifacts():
             CalciferWell(),
             BoneDragon(),
             ElementarySource(),
-            Siren()]
+            Siren(),
+            ElvishBow(),
+            Automate()]
 
 ALL_ARTIFACTS = make_artifacts() + make_artifacts()

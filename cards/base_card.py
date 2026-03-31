@@ -23,9 +23,6 @@ class Card:
             if amount > 0:
                 player.resources.add(resource, amount)
                 self.resources_on.remove(resource, amount)
-    
-    def collect(self, state, player):
-        self.collect_base(state, player)
 
     def get_abilities(self):
         return []
