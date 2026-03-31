@@ -38,10 +38,17 @@ def display_state(state):
         print(f"+--------------------------------------+")
 
     print(f"+--------------------------------------+")
-    print(f"| Monuments disponibles: (pioche: {len(state.monuments_deck)})")
-    for m in state.monuments_visible:
-        print(f"|   - {m.name}")
-    print(f"| Lieux de puissance disponibles:")
-    for pp in state.places_of_power:
-        print(f"|   - {pp.name}")
+    if state.monuments_deck:
+        print(f"| Monuments disponibles: (pioche: {len(state.monuments_deck)})")
+        for m in state.monuments_visible:
+            print(f"|   - {m.name}")
+    else:
+        print("| Monuments: vide")
+    
+    if state.places_of_power:
+        print(f"| Lieux de puissance disponibles:")
+        for pp in state.places_of_power:
+            print(f"|   - {pp.name}")
+    else:
+        print("| Lieux de puissance: vide")
     print(f"+--------------------------------------+")

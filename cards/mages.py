@@ -480,6 +480,71 @@ class Artificer(Mage):
                                  "excluded": [Resource.GOLD, Resource.PEARL],
                                  "card_type": [None, CardType.CREATURE, CardType.DEMON, CardType.DRAGON]}
 
+
+
+class Draconist(Mage):
+    def __init__(self):
+        super().__init__("Draconiste")
+    
+    def collect_base(self, state, player):
+        player.resources.add(Resource.ELAN, 1)
+    
+    def get_abilities(self):
+        def effect1(state, player):
+            choices = [c for c in player.hand if c.card_type == CardType.DRAGON]
+
+            if not choices:
+                print("Vous n'avez pas de dragon en main")
+                return
+
+            print("Choisissez un dragon de votre main:")
+            dragon = choose_card(choices)
+            self.reduction_effect = {"value": 2,
+                                     "excluded": [Resource.PEARL],
+                                     "card_type": [CardType.DRAGON]}
+
+            if not player.can_buy(dragon):
+                print(f"Pas assez de ressource pour jouer {dragon.name}")
+                return
+            
+            # Récup la valeur totale de reduction (draconniste + autres cartes s'il y a)
+            reductions = player.get_applicable_reductions(dragon)
+            total_reduc = sum([reduc["value"] for reduc in reductions])
+            total_cost = sum(val for _, val in dragon.cost.items())
+            reduced_cost = total_cost - total_reduc
+
+            print(f"Choisissez {reduced_cost} ressources à payer: ")
+            choices = [r for r, _ in dragon.cost.items()]
+            for _ in range(reduced_cost):
+                resource = choose_resource(choices)
+                player.resources.remove(resource, 1)
+                # Update le choix des ressources si elles tombent à 0 lorsque le joueur choisit
+                choices = [r for r, _ in dragon.cost.items() if player.resources.has(r, 1)]
+
+            player.hand.remove(dragon)
+            player.board.append(dragon)
+            self.tap()
+            self.reduction_effect = None
+            print(f"{player.name} pose {dragon.name} à -{total_reduc}")
+
+        def effect2(state, player):
+            choices = [c for c in player.board if c.card_type == CardType.DRAGON and c.is_tapped]
+            if not choices:
+                print("Aucun dragon engagé en jeu")
+                return
+
+            print("Choisissez un dragon à revive:")
+            dragon = choose_card(choices)
+            dragon.untap()
+            self.tap()
+            print(f"{player.name} réanime {dragon.name} avec {self.name}")
+        
+        abilities = [
+            Ability("Poser un dragon à -2", cost={}, effect=effect1),
+            Ability("Revive un dragon", cost={}, effect=effect2)
+        ]
+        return abilities
+
 ALL_MAGES = [Alchemist(),
              Necromancer(),
              Nautilian(),

@@ -22,7 +22,7 @@ class Player:
     def set_mage(self, mage):
         self.mage = mage
     
-    def _get_applicable_reductions(self, card):
+    def get_applicable_reductions(self, card):
         """Recupère toutes les réduction qui s'applique à une carte"""
         total_reduction = []
 
@@ -36,10 +36,11 @@ class Player:
         return total_reduction
         
     def can_buy(self, card):
-        """Vérifie si le joueur peut payer le coût d'achat d'une carte
+        """Vérifie si le joueur peut payer le coût d'achat d'une carte,
+        aussi en fonction du cout réduit s'il y a.
         (artefact, monument, lieu de pouvoir)."""
 
-        reductions = self._get_applicable_reductions(card)
+        reductions = self.get_applicable_reductions(card)
         if not reductions:
             return all(self.resources.has(r, amount)
                     for r, amount in card.cost.items())
