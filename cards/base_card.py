@@ -9,6 +9,7 @@ class Card:
         self.cost = cost
         self.card_type = card_type
         self.is_tapped = False
+        self.reduction_effect = None
 
         # Les ressources presentes sur la carte
         self.resources_on = ResourcePool()

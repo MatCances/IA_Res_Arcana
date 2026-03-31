@@ -472,6 +472,14 @@ class Healer(Mage):
                 kwargs.get('context')['cancelled'] = True
                 print(f"[Réaction] {self.name} : attaque annulée !")
 
+
+class Artificer(Mage):
+    def __init__(self):
+        super().__init__(name="Artificier")
+        self.reduction_effect = {"value": 1,
+                                 "excluded": [Resource.GOLD, Resource.PEARL],
+                                 "card_type": [None, CardType.CREATURE, CardType.DEMON, CardType.DRAGON]}
+
 ALL_MAGES = [Alchemist(),
              Necromancer(),
              Nautilian(),
@@ -487,4 +495,5 @@ ALL_MAGES = [Alchemist(),
              Witch(),
              SoothSayer(),
              Transmuter(),
-             Healer()]
+             Healer(),
+             Artificer()]

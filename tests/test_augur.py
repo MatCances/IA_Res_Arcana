@@ -5,14 +5,12 @@ from cards.artifacts import ElementaryShard
 from game.game_state import GameState
 from game.player import Player
 from game.engine import Engine
-from cards.mages import Alchemist
 from utils.constant import Resource
 
 
 @pytest.fixture
 def setup():
     player = Player("Alice")
-    player.mage = Alchemist()
     engine = Engine(players=[player], mages=[], artifacts=[], monuments=[], places_of_power=[], objects=[], scrolls=[])
     engine.state.engine = engine
     augur = Augur()

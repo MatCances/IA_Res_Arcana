@@ -1,6 +1,7 @@
 from utils.resource_pool import ResourcePool
 from utils.constant import Resource
 from cli.input_handler import choose_resource
+from itertools import combinations_with_replacement
 
 class Player:
     """Represente un joueur
@@ -21,11 +22,62 @@ class Player:
     def set_mage(self, mage):
         self.mage = mage
     
+    def _get_applicable_reductions(self, card):
+        """Recupère toutes les réduction qui s'applique à une carte"""
+        total_reduction = []
+
+        for board_card in self.board:
+            reduction_effect = board_card.reduction_effect
+            if reduction_effect:
+                if card.card_type in reduction_effect["card_type"]:
+                    total_reduction.append({"value": reduction_effect["value"],
+                                            "excluded": reduction_effect["excluded"]})            
+
+        return total_reduction
+        
     def can_buy(self, card):
         """Vérifie si le joueur peut payer le coût d'achat d'une carte
         (artefact, monument, lieu de pouvoir)."""
-        return all(self.resources.has(r, amount)
-                   for r, amount in card.cost.items())
+
+        reductions = self._get_applicable_reductions(card)
+        if not reductions:
+            return all(self.resources.has(r, amount)
+                    for r, amount in card.cost.items())
+
+        # Jamais une carte ne peut réduire le cout en perle
+        all_resources = [Resource.CALM,
+                         Resource.DEATH,
+                         Resource.LIFE,
+                         Resource.ELAN,
+                         Resource.GOLD]
+
+        # Générer les ressources qu'on peut réduire
+        # ca gère les doublons ça c'est bon
+        available_resources = []
+        for reduction in reductions:
+            for r in all_resources:
+                if r not in reduction["excluded"]:
+                    available_resources.append(r)
+        
+        # cout total des reductions parmis la liste available_resources
+        total_reduction = sum(r['value'] for r in reductions)
+
+        # Test sur tous les combi possibles
+        for reduction_combo in combinations_with_replacement(available_resources, total_reduction):
+            test_cost = card.cost.copy()
+
+            # Applique la reduc
+            for resource in reduction_combo:
+                if test_cost.get(resource, 0) > 0:
+                    test_cost[resource] -= 1
+            
+            # Verifie si le joueur peut payer maintenant
+            if all(self.resources.has(r, amount)
+                   for r, amount in test_cost.items()):
+                return True
+        
+        return False
+
 
     def can_afford(self, ability):
         """Check si le joueur peut faire le pouvoir d'une carte

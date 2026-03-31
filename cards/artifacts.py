@@ -74,7 +74,7 @@ class Prism(Artifact):
             player.resources.remove(resource, 1)
             print("Choisissez 2 ressources à recevoir :")
             for _ in range(2):
-                r = choose_resource([r for r in Resource.real() if r != Resource.PEARL])
+                r = choose_resource([r for r in Resource.real() if r not in [Resource.PEARL, Resource.GOLD]])
                 player.resources.add(r, 1)
             self.tap()
         
@@ -86,7 +86,7 @@ class Prism(Artifact):
                 print(f"Vous n'avez pas de {source.value}.")
                 return
             print("Choisissez la ressource cible :")
-            cible = choose_resource([r for r in Resource.real() if r != Resource.PEARL])
+            cible = choose_resource([r for r in Resource.real() if r not in [Resource.PEARL, Resource.GOLD]])
             player.resources.remove(source, amount)
             player.resources.add(cible, amount)
             print(f"{player.name} convertit {amount} {source.value} en {cible.value}.")
@@ -118,7 +118,7 @@ class PlanarShadow(Artifact):
     def __init__(self):
         name = "Ombre planaire"
         cost = {Resource.CALM: 2, Resource.DEATH: 2}
-        super().__init__(name, cost)
+        super().__init__(name, cost, card_type=CardType.DEMON)
     
     def get_abilities(self):
         def effect1(state, player):
@@ -306,6 +306,32 @@ class Siren(Artifact):
             print(f"{resource.value} posé sur {card.name}")
             self.tap()
         return [Ability("Placer une ressource sur une carte", {Resource.ANY: 1}, effect=effect)]
+
+
+class Homonculus(Artifact):
+    def __init__(self):
+        super().__init__(name="Homonculus",
+                         cost={Resource.LIFE: 1},
+                         card_type=CardType.DEMON)
+        self.reduction_effect = {"value": 2,
+                                 "excluded": [Resource.PEARL],
+                                 "card_type": [CardType.DEMON]}
+
+    
+    def get_abilities(self):
+        def effect(state, player):
+            print("Choisissez 2 ressources à mettre sur la carte:")
+            excluded = {Resource.GOLD, Resource.PEARL}
+            choices = [r for r in Resource.real() if r not in excluded]
+            for _ in range(2):
+                resource = choose_resource(choices)
+                self.resources_on.add(resource, 1)
+            self.tap()
+
+        abilities = [Ability("2 ressource sur la carte",
+                             cost={},
+                             effect=effect)]
+        return abilities
 
 def make_artifacts():
     return [Phoenix(),

@@ -6,13 +6,11 @@ from game.game_state import GameState
 from game.player import Player
 from utils.constant import Resource
 from game.engine import Engine
-from cards.mages import Alchemist
 
 
 @pytest.fixture
 def setup():
     player = Player("Alice")
-    player.mage = Alchemist()
     engine = Engine(players=[player], mages=[], artifacts=[], monuments=[], places_of_power=[], objects=[], scrolls=[])
     engine.state.engine = engine
     vitality = Vitality()

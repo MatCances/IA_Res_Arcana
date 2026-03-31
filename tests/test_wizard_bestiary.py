@@ -5,7 +5,6 @@ from cards.artifacts import BoneDragon
 from cards.monuments import SacredStatue
 from game.player import Player
 from game.engine import Engine
-from cards.mages import Alchemist
 from utils.constant import Resource, CardType
 from cards.base_card import Card
 
@@ -14,8 +13,6 @@ from cards.base_card import Card
 def setup():
     player1 = Player("Alice")
     player2 = Player("Bob")
-    player1.mage = Alchemist()
-    player2.mage = Alchemist()
     engine = Engine(players=[player1, player2], mages=[], artifacts=[], monuments=[], places_of_power=[], objects=[], scrolls=[])
     engine.state.engine = engine
     bestiary = WizardBestiary()

@@ -2,7 +2,7 @@ import pytest
 from unittest.mock import patch
 from cards.place_of_power import DragonsLair
 from cards.artifacts import BoneDragon
-from cards.mages import Alchemist, Illusionist
+from cards.mages import Illusionist
 from game.game_state import GameState
 from game.player import Player
 from game.engine import Engine
@@ -12,7 +12,6 @@ from utils.constant import Resource, CardType
 @pytest.fixture
 def setup():
     player = Player("Alice")
-    player.mage = Alchemist()
     engine = Engine(players=[player], mages=[], artifacts=[], monuments=[], places_of_power=[], objects=[], scrolls=[])
     engine.state.engine = engine
     lair = DragonsLair()
