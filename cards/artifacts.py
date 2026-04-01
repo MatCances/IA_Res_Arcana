@@ -25,6 +25,36 @@ class Artifact(Card):
         player.hand.remove(self)
         return True
     
+    def play(self, state, player):
+        """Vérifie le coût et pose la carte sur le plateau"""
+        if not player.can_buy(self):
+            print(f" ! Pas assez de ressources pour jouer {self.name} !")
+            return False
+
+        reductions = player.get_applicable_reductions(self)
+
+        if not reductions:
+            # Pas de réduction : paiement normal
+            for r, amount in self.cost.items():
+                player.resources.remove(r, amount)
+        else:
+            # Réduction active : le joueur choisit les ressources qu'il paye
+            total_reduc = sum(r["value"] for r in reductions)
+            total_cost = sum(self.cost.values())
+            reduced_cost = max(0, total_cost - total_reduc)
+
+            print(f"Choisissez {reduced_cost} ressource(s) à payer pour {self.name} (réduction de {total_reduc}) :")
+            choices = [r for r, amount in self.cost.items() if player.resources.has(r, 1)]
+            for _ in range(reduced_cost):
+                resource = choose_resource(choices)
+                player.resources.remove(resource, 1)
+                choices = [r for r, amount in self.cost.items() if player.resources.has(r, 1)]
+
+        # Ajoute la carte au plateau du joueur et la retire de sa main
+        player.board.append(self)
+        player.hand.remove(self)
+        return True
+    
     def discard(self, state, player):
         player.hand.remove(self)
         player.discard.append(self)
