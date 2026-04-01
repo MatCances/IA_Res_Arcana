@@ -288,13 +288,11 @@ class GreatWall(Monument):
         super().__init__("Great Wall")
     
     def on_event(self, event, state, source_player, **kwargs):
-        if event == GameEvent.ATTACK and not self.is_tapped:
+        if event == GameEvent.ATTACK:
             owner = next(p for p in state.players if self in p.board)
-            if source_player != owner:
-                return
             if not owner.resources.has(Resource.ELAN, 1):
                 return
-            print(f"\n[Réaction] {owner.name} : voulez-vous activer la Grande Muraille ? (1 ELAN, s'engage)")
+            print(f"\n[Réaction] {owner.name} : voulez-vous activer la Grande Muraille ? (1 ELAN)")
             print("1 - Oui")
             print("2 - Non")
             choice = 0
@@ -377,8 +375,6 @@ class Temple(Monument):
     def on_event(self, event, state, source_player, **kwargs):
         if event == GameEvent.ATTACK and not self.is_tapped:
             owner = next(p for p in state.players if self in p.board)
-            if source_player != owner:
-                return
             print(f"\n[Réaction] {owner.name} : voulez-vous activer le Temple pour esquiver ?")
             print("1 - Oui")
             print("2 - Non")

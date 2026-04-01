@@ -78,10 +78,7 @@ class Protection(Obj):
     
     def on_event(self, event, state, source_player, **kwargs):
         if event == GameEvent.ATTACK and not self.is_tapped:
-            owner = next((p for p in state.players if self in p.board), None)
-            if owner is None or source_player != owner:
-                return
-            
+            owner = next(p for p in state.players if self in p.board)
             print(f"\n[Réaction] {owner.name} : voulez-vous activer {self.name} ? (annule l'attaque, s'engage)")
             print("1 - Oui")
             print("2 - Non")

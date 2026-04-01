@@ -37,6 +37,11 @@ class Artifact(Card):
         player.board.append(self)
         player.hand.remove(self)
         return True
+
+    def destroy(self, state, player):
+        state.engine.dispatch_event(GameEvent.DESTROY_ARTIFACT, None)
+        player.board.remove(self)
+        player.discard.append(self)
     
     def discard(self, state, player):
         player.hand.remove(self)
@@ -119,6 +124,24 @@ class LightFlask(Artifact):
         cost = {}
         super().__init__(name, cost)
     
+    def on_event(self, event, state, source_player, **kwargs):
+        if event == GameEvent.DESTROY_ARTIFACT:
+            owner = next(p for p in state.players if self in p.board)
+            print(f"\n[Réaction] {owner.name} : voulez-vous activer {self.name} ? (1 CALM)")
+            print("1 - Oui")
+            print("2 - Non")
+            choice = 0
+            while choice not in [1, 2]:
+                try:
+                    choice = int(input("Votre choix : "))
+                except ValueError:
+                    pass
+            if choice == 1:
+                excluded = {Resource.DEATH, Resource.GOLD, Resource.PEARL}
+                choices = [r for r in Resource.real() if r not in excluded]
+                resource = choose_resource(choices)
+                owner.resources.add(resource, 1)
+
     def get_abilities(self):
         def effect(state, player):
             player.resources.remove(Resource.DEATH, 1)
@@ -283,8 +306,7 @@ class DragonEgg(Artifact):
 
             # Se détruit : quitte le board et va en défausse
             self.reduction_effect = None
-            player.board.remove(self)
-            player.discard.append(self)
+            self.destroy(state, player)
 
         return [Ability("Se détruire pour poser un dragon à -4", cost={}, effect=effect)]
 
@@ -338,13 +360,11 @@ class ElementarySource(Artifact):
         player.resources.add(Resource.CALM, 1)
     
     def on_event(self, event, state, source_player, **kwargs):
-        if event == GameEvent.ATTACK and not self.is_tapped:
+        if event == GameEvent.ATTACK:
             owner = next(p for p in state.players if self in p.board)
-            if source_player != owner:
-                return
             if not owner.resources.has(Resource.CALM, 1):
                 return
-            print(f"\n[Réaction] {owner.name} : voulez-vous activer la Grande Muraille ? (1 ELAN, s'engage)")
+            print(f"\n[Réaction] {owner.name} : voulez-vous activer {self.name} ? (1 CALM)")
             print("1 - Oui")
             print("2 - Non")
             choice = 0
@@ -356,7 +376,7 @@ class ElementarySource(Artifact):
             if choice == 1:
                 owner.resources.remove(Resource.CALM, 1)
                 kwargs.get('context')['cancelled'] = True
-                print(f"[Réaction] Grande Muraille : attaque annulée !")
+                print(f"[Réaction] {self.name} : attaque annulée !")
 
 
 class ElvishBow(Artifact):
@@ -415,7 +435,6 @@ class Automate(Artifact):
                              effect=effect)]
         return abilities
 
-    
 
 class Siren(Artifact):
     def __init__(self):
@@ -475,6 +494,287 @@ class Homonculus(Artifact):
                              effect=effect)]
         return abilities
 
+
+class PrismaticDragon(Artifact):
+    def __init__(self):
+        super().__init__(name="Dragon Prismatique",
+                         cost={Resource.ELAN: 2, Resource.LIFE: 2, Resource.CALM: 2},
+                         card_type=CardType.DRAGON)
+    
+    def score(self, state, player):
+        return 1
+    
+    def collect_base(self, state, player):
+        excluded = {Resource.PEARL, Resource.GOLD, Resource.DEATH}
+        choices = [r for r in Resource.real() if r not in excluded]
+        resource = choose_resource(choices)
+        player.resources.add(resource, 1)
+    
+    def get_abilities(self):
+        def effect(state, player):
+            print("Choisissez 4 ressources à mettre sur la carte:")
+            excluded = {Resource.GOLD, Resource.PEARL}
+            choices = [r for r in Resource.real() if r not in excluded]
+            for _ in range(4):
+                resource = choose_resource(choices)
+                self.resources_on.add(resource, 1)
+            self.tap()
+
+        abilities = [Ability("1 GOLD pour 4 ressources sur la carte",
+                             cost={Resource.GOLD: 1},
+                             effect=effect)]
+        return abilities
+
+
+class DurtDragon(Artifact):
+    def __init__(self):
+        super().__init__(name="Dragon de Terre",
+                         cost={Resource.ELAN: 4, Resource.LIFE: 3},
+                         card_type=CardType.DRAGON)
+    
+    def score(self, state, player):
+        return 1
+    
+    def get_abilities(self):
+        def effect(state, player):
+            targets = [p for p in state.players if p != player]
+            for target in targets:
+                # proposer l'esquive avec 1 GOLD
+                if target.resources.has(Resource.GOLD, 1):
+                    print(f"\n{target.name}, voulez-vous esquiver en payant 1 GOLD ?")
+                    print("1 - Oui")
+                    print("2 - Non")
+                    choice = 0
+                    while choice not in [1, 2]:
+                        try:
+                            choice = int(input("Votre choix : "))
+                        except ValueError:
+                            pass
+                    if choice == 1:
+                        target.resources.remove(Resource.GOLD, 1)
+                        print(f"{target.name} esquive l'attaque !")
+                        continue
+                
+                # sinon résoudre l'attaque
+                state.engine.resolve_attack(target, damage=2)
+            
+            self.tap()
+        
+        return [Ability("Attaquer tous les adversaires (2 dégâts)", cost={}, effect=effect)]
+
+
+class Dolfin(Artifact):
+    def __init__(self):
+        super().__init__(name="Dauphin",
+                         cost={Resource.GOLD: 2, Resource.LIFE: 2, Resource.CALM: 2},
+                         card_type=CardType.CREATURE)
+    
+    def collect_base(self, state, player):
+        player.resources.add(Resource.PEARL, 1)
+    
+    def on_event(self, event, state, source_player, **kwargs):
+        if event == GameEvent.ATTACK:
+            owner = next(p for p in state.players if self in p.board)
+            if not owner.resources.has(Resource.CALM, 1):
+                return
+            print(f"\n[Réaction] {owner.name} : voulez-vous activer {self.name} ? (1 CALM)")
+            print("1 - Oui")
+            print("2 - Non")
+            choice = 0
+            while choice not in [1, 2]:
+                try:
+                    choice = int(input("Votre choix : "))
+                except ValueError:
+                    pass
+            if choice == 1:
+                owner.resources.remove(Resource.CALM, 1)
+                kwargs.get('context')['cancelled'] = True
+                print(f"[Réaction] {self.name} : attaque annulée !")
+
+    def get_abilities(self):
+        def effect(state, player):
+            player.resources.add(Resource.CALM, 3)
+
+            targets = [p for p in state.players if p != player]
+            for target in targets:
+                target.resources.add(Resource.CALM, 1)
+            
+            self.tap()
+        
+        abilities = [Ability("+3 CALM, tous les adversaires: +1 CALM",
+                             cost={},
+                             effect=effect)]
+        return abilities
+
+
+class OrnateStatuette(Artifact):
+    def __init__(self):
+        super().__init__(name="Statuette Ornée",
+                         cost={Resource.DEATH: 2, Resource.GOLD: 1})
+    
+    def score(self, state, player):
+        return 1
+    
+    def get_abilities(self):
+        def effect1(state, player):
+            player.resources.add(Resource.DEATH, 3)
+
+            targets = [p for p in state.players if p != player]
+            for target in targets:
+                target.resources.add(Resource.DEATH, 1)
+            
+            self.tap()
+        
+        def effect2(state, player):
+            player.resources.add(Resource.GOLD, 2)
+            player.resources.add(Resource.ELAN, 1)
+            self.destroy(state, player)
+        
+        abilities = [Ability("+3 DEATH, tous les adversaires: +1 DEATH",
+                             cost={},
+                             effect=effect1),
+                    Ability("Détruire la carte: +2 GOLD, +1 ELAN",
+                            cost={},
+                            effect=effect2)]
+        return abilities
+
+
+class Shrivatsa(Artifact):
+    def __init__(self):
+        super().__init__(name="Shrivatsa", cost={})
+    
+    def collect_base(self, state, player):
+        if Resource.PEARL in self.resources_on.available():
+            print(f"{self.name}: Collecter 1 GOLD ou 2 ressources au choix ?")
+            print("1 - +1 GOLD")
+            print("2 - +2 Ressources au choix")
+            choice = 0
+            while choice not in [1, 2]:
+                try:
+                    choice = int(input("Votre choix : "))
+                except ValueError:
+                    pass
+            if choice == 1:
+                player.resources.add(Resource.GOLD, 1)
+            elif choice == 2:
+                print("Choisissez 2 ressources")
+                excluded = [Resource.PEARL, Resource.GOLD]
+                choices = [r for r in Resource.real() if r not in excluded]
+                for _ in range(2):
+                    res = choose_resource(choices)
+                    player.resources.add(res, 1)
+    
+    def get_abilities(self):
+        def effect(state, player):
+            self.resources_on.add(Resource.PEARL, 1)
+            self.tap()
+
+        abilities = [Ability(f"Mettre une PEARL sur {self.name}",
+                             cost={Resource.PEARL: 1},
+                             effect=effect)]
+        return abilities
+
+
+class FireChalice(Artifact):
+    def __init__(self):
+        super().__init__(name="Coupe de Feu",
+                         cost={Resource.GOLD: 1, Resource.ELAN: 1})
+    
+    def collect_base(self, state, player):
+        player.resources.add(Resource.ELAN, 2)
+    
+    def get_abilities(self):
+        def effect(state, player):
+            player.resources.remove(Resource.ELAN, 1)
+            tapped = [card for card in player.board if card.is_tapped]
+            if not tapped:
+                print("Aucune carte engagée.")
+                self.tap()
+                return
+            
+            print("Choisissez une carte à désengager: ")
+            card = choose_card(tapped)
+            card.untap()
+            self.tap()
+
+        abilities = [Ability("1 ELAN pour désengager une carte",
+                             cost={Resource.ELAN: 1},
+                             effect=effect)]
+        return abilities
+
+
+class Moloss(Artifact):
+    def __init__(self):
+        super().__init__(name="Molosse",
+                         cost={Resource.ELAN: 1},
+                         card_type=CardType.CREATURE)
+    
+    def on_event(self, event, state, source_player, **kwargs):
+        if event == GameEvent.ATTACK:
+            owner = next(p for p in state.players if self in p.board)
+            print(f"\n[Réaction] {owner.name} : voulez-vous engager {self.name} ?")
+            print("1 - Oui")
+            print("2 - Non")
+            choice = 0
+            while choice not in [1, 2]:
+                try:
+                    choice = int(input("Votre choix : "))
+                except ValueError:
+                    pass
+            if choice == 1:
+                self.tap()
+
+    def get_abilities(self):
+        # Cet effet doit se faire justement si la carte est engagé.
+        # Le problème c'est que get_abilities n'est appelé que si la carte n'est pas engagé
+        # j'ai géré ca dans le input handler, exception pour le Molosse
+        def effect(state, player):
+            player.resources.remove(Resource.ELAN, 1)
+            self.untap()
+
+        abilities = [Ability("1 ELAN pour désengager le Molosse",
+                             cost={Resource.ELAN: 1},
+                             effect=effect)]
+        return abilities
+
+
+class FireDragon(Artifact):
+    def __init__(self):
+        super().__init__(name="Dragon de Feu",
+                         cost={Resource.ELAN: 6},
+                         card_type=CardType.DRAGON)
+    
+    def score(self, state, player):
+        return 1
+    
+    def get_abilities(self):
+        def effect(state, player):
+            targets = [p for p in state.players if p != player]
+            for target in targets:
+                # proposer l'esquive avec 1 CALM
+                if target.resources.has(Resource.CALM, 1):
+                    print(f"\n{target.name}, voulez-vous esquiver en payant 1 CALM ?")
+                    print("1 - Oui")
+                    print("2 - Non")
+                    choice = 0
+                    while choice not in [1, 2]:
+                        try:
+                            choice = int(input("Votre choix : "))
+                        except ValueError:
+                            pass
+                    if choice == 1:
+                        target.resources.remove(Resource.CALM, 1)
+                        print(f"{target.name} esquive l'attaque !")
+                        continue
+                
+                # sinon résoudre l'attaque
+                state.engine.resolve_attack(target, damage=2)
+            
+            self.tap()
+        
+        return [Ability("Attaquer tous les adversaires (2 dégâts)", cost={}, effect=effect)]
+    
+
 def make_artifacts():
     return [Phoenix(),
             Prism(),
@@ -487,6 +787,15 @@ def make_artifacts():
             ElementarySource(),
             Siren(),
             ElvishBow(),
-            Automate()]
+            Automate(),
+            DragonEgg(),
+            Trident(),
+            DurtDragon(),
+            Shrivatsa(),
+            OrnateStatuette(),
+            Dolfin(),
+            FireChalice(),
+            Moloss(),
+            FireDragon()]
 
-ALL_ARTIFACTS = make_artifacts() + make_artifacts()
+ALL_ARTIFACTS = make_artifacts()

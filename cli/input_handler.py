@@ -84,6 +84,13 @@ def available_actions(state, player, dispatch=None):
                 if player.can_afford(ability):
                     actions.append(action_use_ability(state, player, card, ability))
 
+        # Exception pour le Molosse qui à une ability justement quand elle est engagé
+        from cards.artifacts import Moloss
+        if isinstance(card, Moloss) and card.is_tapped:
+            for ability in card.get_abilities():
+                if player.can_afford(ability):
+                    actions.append(action_use_ability(state, player, card, ability))
+
     # jouer un artefact depuis la main
     for card in player.hand:
         if player.can_buy(card):

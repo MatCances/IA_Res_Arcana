@@ -47,16 +47,6 @@ def test_deja_engage(setup):
     assert context["cancelled"] == False
 
 
-def test_autre_joueur_attaque(setup):
-    """Ne réagit pas si c'est un autre joueur qui est attaqué"""
-    state, player1, player2, shield = setup
-    context = {"damage": 2, "cancelled": False}
-    with patch('builtins.input', return_value='1') as mock_input:
-        shield.on_event(GameEvent.ATTACK, state, player2, context=context)
-    mock_input.assert_not_called()
-    assert context["cancelled"] == False
-
-
 def test_autre_evenement(setup):
     """Ne réagit pas à un autre événement"""
     state, player1, player2, shield = setup

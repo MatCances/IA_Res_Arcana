@@ -20,6 +20,7 @@ class GameEvent(Enum):
     BUY_PLACE_OF_POWER = "buy_place_of_power"
     PLAY_ARTIFACT = "play_artifact"
     DISCARD_CARD = "discard_card"
+    DESTROY_ARTIFACT = "destroy artifact"
     ATTACK = "attack"
     VICTORY_CHECK = "victory_check"
 
