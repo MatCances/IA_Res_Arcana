@@ -22,6 +22,7 @@ class GameEvent(Enum):
     DISCARD_CARD = "discard_card"
     DESTROY_ARTIFACT = "destroy artifact"
     ATTACK = "attack"
+    GET_GOLD = "get gold"
     VICTORY_CHECK = "victory_check"
 
 

@@ -284,7 +284,7 @@ class Seer(Mage):
             if choice == 1:
                 deck = player.deck
             else:
-                deck = state.monuments
+                deck = state.monuments_deck
             
             if not deck:
                 print("La pioche est vide !")
