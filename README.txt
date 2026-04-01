@@ -1,6 +1,2 @@
-TODO
-- la réduction de cout ça a l'air bon, finir avec la draconniste. et repaire des dragons.
-le cout de la carte est réduit, il faut faire comme le pouvoir
-de la draconniste: laisser choisir le joueur les ressources qu'il paye
-Limite déplacer la mécanique identique au pouvoir de la draconniste dans la fonction play
-des artefacts
+TODO: quand tous les artefacts seront implémenté, faire des tests en mode vrai game totale jusqu'a la victoire
+pour tester plusieurs artefacts en meme temps. 
