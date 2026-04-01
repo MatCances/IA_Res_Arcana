@@ -773,7 +773,231 @@ class FireDragon(Artifact):
             self.tap()
         
         return [Ability("Attaquer tous les adversaires (2 dégâts)", cost={}, effect=effect)]
+
+
+class KeenSword(Artifact):
+    def __init__(self):
+        super().__init__(name="Epée Vive",
+                         cost={Resource.GOLD: 1, Resource.ELAN: 1})
     
+    def collect_base(self, state, player):
+        player.resources.add(Resource.DEATH, 1)
+        player.resources.add(Resource.ELAN, 1)
+    
+    def on_event(self, event, state, source_player, **kwargs):
+        if event == GameEvent.ATTACK:
+            owner = next(p for p in state.players if self in p.board)
+            if not owner.resources.has(Resource.ELAN, 1):
+                return
+            print(f"\n[Réaction] {owner.name} : voulez-vous activer {self.name} ? (1 ELAN, pose 1 DEATH sur la carte)")
+            print("1 - Oui")
+            print("2 - Non")
+            choice = 0
+            while choice not in [1, 2]:
+                try:
+                    choice = int(input("Votre choix : "))
+                except ValueError:
+                    pass
+            if choice == 1:
+                owner.resources.remove(Resource.ELAN, 1)
+                self.resources_on.add(Resource.DEATH, 1)
+                kwargs.get('context')['cancelled'] = True
+                print(f"[Réaction] {self.name} : attaque annulée !")
+
+
+class GoldLion(Artifact):
+    def __init__(self):
+        super().__init__(name="Lion d'Or",
+                         cost={Resource.ELAN: 2, Resource.LIFE: 1, Resource.CALM: 1, Resource.GOLD: 1},
+                         card_type=CardType.CREATURE)
+    
+    def score(self, state, player):
+        return 1
+    
+    def collect_base(self, state, player):
+        player.resources.add(Resource.CALM, 1)
+        player.resources.add(Resource.LIFE, 1)
+        player.resources.add(Resource.ELAN, 1)
+    
+    def on_event(self, event, state, source_player, **kwargs):
+        if event == GameEvent.ATTACK and not self.is_tapped:
+            owner = next(p for p in state.players if self in p.board)
+            if not owner.resources.has(Resource.ELAN, 1):
+                return
+            print(f"\n[Réaction] {owner.name} : voulez-vous engager {self.name} ?")
+            print("1 - Oui")
+            print("2 - Non")
+            choice = 0
+            while choice not in [1, 2]:
+                try:
+                    choice = int(input("Votre choix : "))
+                except ValueError:
+                    pass
+            if choice == 1:
+                self.tap()
+                kwargs.get('context')['cancelled'] = True
+                print(f"[Réaction] {self.name} : attaque annulée !")
+
+
+class LifeChalice(Artifact):
+    def __init__(self):
+        super().__init__(name="Calice de Vie",
+                         cost={Resource.GOLD: 1, Resource.LIFE: 1, Resource.CALM: 1})
+    
+    def collect_base(self, state, player):
+        player.resources.add(Resource.CALM, 1)
+        player.resources.add(Resource.LIFE, 1)
+    
+    def on_event(self, event, state, source_player, **kwargs):
+        if event == GameEvent.ATTACK and not self.is_tapped:
+            owner = next(p for p in state.players if self in p.board)
+            if not owner.resources.has(Resource.ELAN, 1):
+                return
+            print(f"\n[Réaction] {owner.name} : voulez-vous engager {self.name} ?")
+            print("1 - Oui")
+            print("2 - Non")
+            choice = 0
+            while choice not in [1, 2]:
+                try:
+                    choice = int(input("Votre choix : "))
+                except ValueError:
+                    pass
+            if choice == 1:
+                self.tap()
+                kwargs.get('context')['cancelled'] = True
+                print(f"[Réaction] {self.name} : attaque annulée !")
+    
+    def get_abilities(self):
+        def effect(state, player):
+            player.resources.remove(Resource.CALM, 2)
+            self.resources_on.add(Resource.CALM, 2)
+            self.resources_on.add(Resource.LIFE, 1)
+        
+        abilities = [Ability(f"2 CALM pour mettre 2 CALM et 1 LIFE sur {self.name}",
+                             cost={Resource.CALM: 2},
+                             effect=effect)]
+        return abilities
+
+
+class MidasRing(Artifact):
+    def __init__(self):
+        super().__init__(name="Anneau de Midas",
+                         cost={Resource.GOLD: 1, Resource.LIFE: 1})
+    
+    def score(self, state, player):
+        return 1
+    
+    def get_abilities(self):
+        def effect1(state, player):
+            player.resources.remove(Resource.LIFE, 2)
+            self.resources_on.add(Resource.GOLD, 1)
+        
+        def effect2(state, player):
+            self.resources_on.add(Resource.GOLD, 1)
+            self.tap()
+        
+        abilities = [Ability(f"2 LIFE pour mettre 1 GOLD sur {self.name}",
+                             cost={Resource.LIFE: 2},
+                             effect=effect1),
+                    Ability(f"Engager {self.name} pour mettre 1 GOLD dessus",
+                            cost={},
+                            effect=effect2)]
+        return abilities
+
+
+class CursedSkull(Artifact):
+    def __init__(self):
+        super().__init__(name="Crane Maudit",
+                         cost={Resource.DEATH: 2})
+    
+    def get_abilities(self):
+        def effect(state, player):
+            player.resources.remove(Resource.LIFE, 1)
+            excluded = [Resource.PEARL, Resource.GOLD, Resource.LIFE]
+            choices = [r for r in Resource.real() if r not in excluded]
+            for _ in range(3):
+                resource = choose_resource(choices)
+                self.resources_on.add(resource, 1)
+        
+        abilities = [Ability(f"1 LIFE pour mettre 3 ressources sur {self.name} (sauf LIFE, GOLD)",
+                             cost={Resource.LIFE: 1},
+                             effect=effect)]
+        return abilities
+
+
+class OldDragon(Artifact):
+    def __init__(self):
+        super().__init__(name="Dragon Ancien",
+                         cost={Resource.DEATH: 6, Resource.LIFE: 6},
+                         card_type=CardType.DRAGON)
+    
+    def score(self, state, player):
+        return 2
+    
+    def get_abilities(self):
+        def effect(state, player):
+            targets = [p for p in state.players if p != player]
+            for target in targets:
+                # proposer l'esquive avec 2 GOLD ou 1 PEARL
+                if target.resources.has(Resource.GOLD, 2) or target.resources.has(Resource.PEARL, 1):
+                    print(f"\n{target.name}, voulez-vous esquiver en payant 2 GOLD ou 1 PEARL ?")
+                    print("1 - Oui 2 GOLD")
+                    print("2 - Oui 1 PEARL")
+                    print("3 - Non")
+                    choice = 0
+                    while choice not in [1, 2, 3]:
+                        try:
+                            choice = int(input("Votre choix : "))
+                        except ValueError:
+                            pass
+                    if choice == 1:
+                        target.resources.remove(Resource.GOLD, 2)
+                        print(f"{target.name} esquive l'attaque !")
+                        continue
+                    elif choice == 2:
+                        target.resources.remove(Resource.PEARL, 1)
+                        print(f"{target.name} esquive l'attaque !")
+                        continue
+                
+                # sinon résoudre l'attaque
+                state.engine.resolve_attack(target, damage=3)
+            
+            self.tap()
+        
+        return [Ability("Attaquer tous les adversaires (3 dégâts)", cost={}, effect=effect)]
+
+
+class DragonTeeth(Artifact):
+    def __init__(self):
+        super().__init__(name="Dent de Dragon",
+                         cost={Resource.ELAN: 1, Resource.DEATH: 1})
+    
+    def get_abilities(self):
+        def effect1(state, player):
+            player.resources.remove(Resource.ELAN, 2)
+            self.resources_on.add(Resource.ELAN, 3)
+        
+        def effect2(state, player):
+            # Le dragon ancien ne peut pas etre mis avec la dent du dragon
+            dragons = [c for c in player.hand
+                       if c.card_type == CardType.DRAGON and not isinstance(c, OldDragon)]
+            if not dragons:
+                print("Vous n'avez aucun dragon en main que vous pouvez poser.")
+                return
+
+            print("Choisissez un dragon à poser à 0 :")
+            dragon = choose_card(dragons)
+            player.board.append(dragon)
+            player.hand.remove(dragon)
+            print(f"{player.name} joue {dragon.name} à 0.")
+        
+        abilities = [Ability(f"2 ELAN pour mettre 3 ELAN sur {self.name}",
+                             cost={Resource.ELAN: 2},
+                             effect=effect1),
+                    Ability(f"Engager {self.name} pour mettre un dragon à 0",
+                             cost={Resource.ELAN: 3},
+                             effect=effect2)]
+        return abilities
 
 def make_artifacts():
     return [Phoenix(),
@@ -796,6 +1020,15 @@ def make_artifacts():
             Dolfin(),
             FireChalice(),
             Moloss(),
-            FireDragon()]
+            FireDragon(),
+            PrismaticDragon(),
+            KeenSword(),
+            LifeChalice(),
+            Homonculus(),
+            MidasRing(),
+            CursedSkull(),
+            OldDragon(),
+            DragonTeeth(),
+            GoldLion()]
 
 ALL_ARTIFACTS = make_artifacts()
