@@ -13,23 +13,6 @@ class Artifact(Card):
         if not player.can_buy(self):
             print(f" ! Pas assez de ressources pour jouer {self.name} !")
             return False
-        # retirer le coût
-        # TODO: ici si le cout de la carte est réduit, il faut faire comme le pouvoir
-        # de la draconniste: laisser choisir le joueur les ressources qu'il paye
-        # Limite déplacer la mécanique identique au pouvoir de la draconniste ici.
-        for r, amount in self.cost.items():
-            player.resources.remove(r, amount)
-
-        # Ajoute la carte au plateau du joueur et la retire de sa main
-        player.board.append(self)
-        player.hand.remove(self)
-        return True
-    
-    def play(self, state, player):
-        """Vérifie le coût et pose la carte sur le plateau"""
-        if not player.can_buy(self):
-            print(f" ! Pas assez de ressources pour jouer {self.name} !")
-            return False
 
         reductions = player.get_applicable_reductions(self)
 
@@ -236,6 +219,74 @@ class CalciferWell(Artifact):
 
         abilities = [Ability("1 LIFE pour 1 ELAN + 1 DEATH", cost={Resource.LIFE: 1}, effect=effect)]
         return abilities
+
+
+class Trident(Artifact):
+    def __init__(self):
+        super().__init__(
+            name="Trident",
+            cost={Resource.ELAN: 1, Resource.CALM: 1, Resource.DEATH: 1}
+        )
+
+    def collect_base(self, state, player):
+        choices = [Resource.LIFE, Resource.CALM]  # CALM et LIFE
+        print("Trident : choisissez une ressource à collecter (CALM ou LIFE) :")
+        resource = choose_resource(choices)
+        player.resources.add(resource, 1)
+
+    def get_abilities(self):
+        def effect1(state, player):
+            player.resources.remove(Resource.LIFE, 3)
+            player.resources.add(Resource.PEARL, 1)
+            self.tap()
+
+        def effect2(state, player):
+            player.resources.remove(Resource.PEARL, 1)
+            excluded = {Resource.PEARL, Resource.GOLD}
+            choices = [r for r in Resource.real() if r not in excluded]
+            print("Choisissez 6 ressources à poser sur le Trident :")
+            for _ in range(6):
+                resource = choose_resource(choices)
+                self.resources_on.add(resource, 1)
+            # Ne s'engage pas
+
+        return [
+            Ability("3 LIFE pour 1 PEARL", cost={Resource.LIFE: 3}, effect=effect1),
+            Ability("1 PEARL pour poser 6 ressources sur le Trident", cost={Resource.PEARL: 1}, effect=effect2)
+        ]
+
+
+class DragonEgg(Artifact):
+    def __init__(self):
+        super().__init__(
+            name="Oeuf de dragon",
+            cost={Resource.GOLD: 1}
+        )
+
+    def score(self, state, player):
+        return 1
+
+    def get_abilities(self):
+        def effect(state, player):
+            self.reduction_effect = {"value": 4,
+                                     "excluded": [Resource.PEARL],
+                                     "card_type": [CardType.DRAGON]}
+            dragons = [c for c in player.hand
+                       if (c.card_type == CardType.DRAGON and player.can_buy(c))]
+            if not dragons:
+                print("Vous n'avez aucun dragon en main que vous pouvez poser à -4.")
+                return
+
+            print("Choisissez un dragon à poser :")
+            dragon = choose_card(dragons)
+            dragon.play(state, player)
+
+            # Se détruit : quitte le board et va en défausse
+            self.reduction_effect = None
+            player.board.remove(self)
+            player.discard.append(self)
+
+        return [Ability("Se détruire pour poser un dragon à -4", cost={}, effect=effect)]
 
 
 class BoneDragon(Artifact):
