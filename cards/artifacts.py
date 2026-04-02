@@ -129,7 +129,7 @@ class LightFlask(Artifact):
     def on_event(self, event, state, source_player, **kwargs):
         if event == GameEvent.DESTROY_ARTIFACT:
             owner = next(p for p in state.players if self in p.board)
-            print(f"\n[Réaction] {owner.name} : voulez-vous activer {self.name} ? (1 CALM)")
+            print(f"\n[Réaction] {owner.name} : voulez-vous activer {self.name} ?")
             print("1 - Oui")
             print("2 - Non")
             choice = 0
@@ -1093,7 +1093,7 @@ class GloryHand(Artifact):
 class ChaosGremlin(Artifact):
     def __init__(self):
         super().__init__(name="Gremlin du Chaos",
-                         cost={Resource.ELAN, Resource.DEATH},
+                         cost={Resource.ELAN: 1, Resource.DEATH: 1},
                          card_type=CardType.DEMON)
     
     def get_abilities(self):
@@ -1169,9 +1169,9 @@ class WarConch(Artifact):
 
     def get_abilities(self):
         def effect1(state, player):
-            player.ressources.remove(Resource.CALM, 1)
-            player.ressources.remove(Resource.LIFE, 1)
-            player.ressources.remove(Resource.ELAN, 1)
+            player.resources.remove(Resource.CALM, 1)
+            player.resources.remove(Resource.LIFE, 1)
+            player.resources.remove(Resource.ELAN, 1)
             self.resources_on.add(Resource.DEATH, 5)
         
         def effect2(state, player):
@@ -1586,7 +1586,7 @@ class DestructionVortex(Artifact):
     
     def get_abilities(self):
         def effect1(state, player):
-            player.ressources.remove(Resource.LIFE, 1)
+            player.resources.remove(Resource.LIFE, 1)
             player.resources.add(Resource.DEATH, 3)
             self.tap()
         

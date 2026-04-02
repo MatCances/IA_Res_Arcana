@@ -24,7 +24,7 @@ class ResourcePool:
         Returns:
             int: le nombre
         """
-        return self.resource[resource]
+        return self.resources[resource]
 
     def has(self, resource, amount=1):
         """Check si le ResourcePool à une certaine quantité de ressource
