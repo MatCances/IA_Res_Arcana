@@ -4,14 +4,14 @@ from cards.place_of_power import DragonsLair
 from cards.artifacts import BoneDragon
 from cards.mages import Illusionist
 from game.game_state import GameState
-from game.player import Player
+from game.human_player import HumanPlayer
 from game.engine import Engine
 from utils.constant import Resource, CardType
 
 
 @pytest.fixture
 def setup():
-    player = Player("Alice")
+    player = HumanPlayer("Alice")
     engine = Engine(players=[player], mages=[], artifacts=[], monuments=[], places_of_power=[], objects=[], scrolls=[])
     engine.state.engine = engine
     lair = DragonsLair()

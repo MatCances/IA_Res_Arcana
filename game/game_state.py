@@ -26,12 +26,3 @@ class GameState:
             monument = self.monuments_deck.pop(0)
             self.monuments_visible.append(monument)
             print(f"Monument révélé : {monument.name}")
-
-    def clone(self):
-        raise NotImplementedError("clone() est requis pour l'IA")
-
-    def is_terminal(self):
-        raise NotImplementedError
-
-    def get_winner(self):
-        raise NotImplementedError

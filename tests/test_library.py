@@ -1,13 +1,13 @@
 import pytest
 from cards.monuments import Library
 from game.game_state import GameState
-from game.player import Player
+from game.human_player import HumanPlayer
 from cards.artifacts import ElementaryShard
 
 
 @pytest.fixture
 def setup():
-    player = Player("Alice")
+    player = HumanPlayer("Alice")
     state = GameState([player])
     library = Library()
     card1 = ElementaryShard()

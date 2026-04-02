@@ -2,7 +2,7 @@ from cards.base_card import Card
 from utils.constant import Resource, GameEvent, CardType
 from game.action import Action
 from game.ability import Ability
-from cli.input_handler import choose_resource, choose_card
+# from cli.input_handler import choose_resource, player.choose_card
 
 class Monument(Card):
     def __init__(self, name):
@@ -25,7 +25,7 @@ class Obelisc(Monument):
         excluded = {Resource.GOLD, Resource.PEARL}
         choices = [r for r in Resource.real() if r not in excluded]
         for _ in range(6):
-            resource = choose_resource(choices)
+            resource = player.choose_resource(choices)
             player.resources.add(resource, 1)
     
     def score(self, state, player):
@@ -121,7 +121,7 @@ class Laboratory(Monument):
                 return
             
             print("Choisissez une ressource à payer :")
-            resource = choose_resource(player.resources.available())
+            resource = player.choose_resource(player.resources.available())
             player.resources.remove(resource, 1)
 
             if not player.board:
@@ -129,7 +129,7 @@ class Laboratory(Monument):
                 return
             
             print("Choisissez une carte sur laquelle poser la ressource :")
-            card = choose_card(player.board)
+            card = player.choose_card(player.board)
             card.resources_on.add(resource, 1)
             print(f"{resource.value} posé sur {card.name}")
             self.tap()
@@ -154,7 +154,7 @@ class DemonicWorkshop(Monument):
     
     def collect_base(self, state, player):
         print(f"{player.name}, choisissez une ressource à collecter (Elan / Death) :")
-        resource = choose_resource([Resource.ELAN, Resource.DEATH])
+        resource = player.choose_resource([Resource.ELAN, Resource.DEATH])
         player.resources.add(resource, 1)
     
     def get_abilities(self):
@@ -165,7 +165,7 @@ class DemonicWorkshop(Monument):
                 return
             player.resources.remove(Resource.GOLD, 1)
             print("Choisissez une carte à désengager :")
-            card = choose_card(tapped)
+            card = player.choose_card(tapped)
             card.untap()
             print(f"{card.name} est désengagée.")
             self.tap()
@@ -199,7 +199,7 @@ class Mausoleum(Monument):
     def get_abilities(self):
         def effect(state, player):
             print("Choisissez une ressource à payer :")
-            resource = choose_resource(player.resources.available())
+            resource = player.choose_resource(player.resources.available())
             player.resources.remove(resource, 1)
             self.resources_on.add(Resource.DEATH, 1)
             print(f"1 DEATH posé sur le Mausolée.")
@@ -219,8 +219,8 @@ class HangingGarden(Monument):
         choices = [r for r in Resource.real() if r not in excluded]
         print(f"{self.name} : choisissez 3 ressource à collecter :")
 
-        for i in range(3):
-            resource = choose_resource(choices)
+        for _ in range(3):
+            resource = player.choose_resource(choices)
             player.resources.add(resource, 1)
 
 
@@ -251,7 +251,7 @@ class Colossus(Monument):
     def get_abilities(self):
         def effect(state, player):
             print("Choisissez une ressource à payer :")
-            resource = choose_resource(player.resources.available())
+            resource = player.choose_resource(player.resources.available())
             player.resources.remove(resource, 1)
             self.resources_on.add(Resource.GOLD, 1)
             print(f"1 GOLD posé sur le Colosse.")
@@ -402,7 +402,9 @@ class ImpiousCathedral(Monument):
             owner = next((p for p in state.players if self in p.board), None)
             if owner is None:
                 return
-            demons = [card for card in owner.board if hasattr(card, 'card_type') and card.card_type in {CardType.DEMON, CardType.ILLUSIONIST} and not card.is_tapped]
+            demons = [c for c in owner.board
+                      if c.card_type in {CardType.DEMON, CardType.ILLUSIONIST}
+                      and not c.is_tapped]
             if not demons:
                 return
             print(f"\n[Réaction] {owner.name} : voulez-vous activer la Cathédrale Impie ? (s'engage + engage un démon pour +1 point)")
@@ -416,7 +418,7 @@ class ImpiousCathedral(Monument):
                     pass
             if choice == 1:
                 print("Choisissez un démon à engager :")
-                demon = choose_card(demons)
+                demon = owner.choose_card(demons)
                 self.tap()
                 demon.tap()
                 owner.points += 1

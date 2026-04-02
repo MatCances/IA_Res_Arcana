@@ -1,7 +1,7 @@
 from cards.base_card import Card
 from utils.constant import Resource, GameEvent
 from game.ability import Ability
-from cli.input_handler import choose_card, choose_resource
+# from cli.input_handler import choose_card, choose_resource
 
 class Scroll(Card):
     def __init__(self, name, cost):
@@ -20,7 +20,7 @@ class Vitality(Scroll):
                 return
             
             print("Choisissez une carte à désengager :")
-            card = choose_card(tapped)
+            card = player.choose_card(tapped)
             card.untap()
             print(f"{card.name} est désengagée.")
             player.resources.remove(Resource.ELAN, 2)
@@ -78,7 +78,7 @@ class Projection(Scroll):
     def get_abilities(self):
         def effect(state, player):
             print("Choisissez une ressource à payer :")
-            resource = choose_resource(player.resources.available(excluded={Resource.PEARL, Resource.GOLD}))
+            resource = player.choose_resource(player.resources.available(excluded={Resource.PEARL, Resource.GOLD}))
             
             max_x = player.resources.resources[resource] // 3
             if max_x == 0:
@@ -134,7 +134,7 @@ class Destruction(Scroll):
                 return
             
             print("Choisissez un artefact à détruire :")
-            card = choose_card(artifacts)
+            card = player.choose_card(artifacts)
             
             # calculer le total du coût
             total = sum(card.cost.values())
@@ -149,7 +149,7 @@ class Destruction(Scroll):
             choices = [r for r in Resource.real() if r not in excluded]
             print(f"Choisissez {total} ressource(s) à recevoir :")
             for _ in range(total):
-                resource = choose_resource(choices)
+                resource = player.choose_resource(choices)
                 player.resources.add(resource, 1)
             
             player.board.remove(self)
@@ -170,7 +170,7 @@ class Recovery(Scroll):
             
             player.resources.remove(Resource.DEATH, 1)
             print("Choisissez une carte à récupérer :")
-            card = choose_card(player.discard)
+            card = player.choose_card(player.discard)
             player.discard.remove(card)
             player.hand.append(card)
             print(f"{player.name} récupère {card.name}")
@@ -187,7 +187,7 @@ class Transformation(Scroll):
     def get_abilities(self):
         def effect(state, player):
             print("Choisissez la ressource à payer :")
-            resource_out = choose_resource(player.resources.available(excluded={Resource.PEARL}))
+            resource_out = player.choose_resource(player.resources.available(excluded={Resource.PEARL}))
             
             max_x = player.resources.resources[resource_out]
             x = 0
@@ -200,7 +200,7 @@ class Transformation(Scroll):
             print("Choisissez la ressource à recevoir :")
             excluded = {Resource.PEARL, Resource.GOLD}
             choices = [r for r in Resource.real() if r not in excluded]
-            resource_in = choose_resource(choices)
+            resource_in = player.choose_resource(choices)
             
             player.resources.remove(resource_out, x)
             player.resources.add(resource_in, x)

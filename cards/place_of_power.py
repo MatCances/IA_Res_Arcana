@@ -1,7 +1,7 @@
 from cards.base_card import Card
 from utils.constant import Resource, CardType
 from game.ability import Ability
-from cli.input_handler import choose_card, choose_resource
+# from cli.input_handler import choose_card, choose_resource
 
 
 class PlaceOfPower(Card):
@@ -43,12 +43,12 @@ class DragonsLair(PlaceOfPower):
                 return
             
             print("Choisissez un dragon à engager :")
-            card = choose_card(dragons)
+            card = player.choose_card(dragons)
             
             if card.card_type == CardType.ILLUSIONIST:
                 print("L'Illusionniste imite un dragon : payez 2 ressources :")
                 for _ in range(2):
-                    resource = choose_resource(player.resources.available(excluded={Resource.PEARL}))
+                    resource = player.choose_resource(player.resources.available(excluded={Resource.PEARL}))
                     player.resources.remove(resource, 1)
             
             card.tap()
@@ -132,8 +132,8 @@ class WizardBestiary(PlaceOfPower):
             # choisir le dragon d'abord
             print("Choisissez un dragon à récupérer :")
             cards = [card for card, _ in dragons]
-            card = choose_card(cards)
-            owner_discard = next(p for c, p in dragons if c == card)
+            card = player.choose_card(cards)
+            owner = next(p for c, p in dragons if c == card)
             
             # vérifier que le joueur a assez de ressources
             cout_fixe = sum(card.cost.values())
@@ -144,7 +144,7 @@ class WizardBestiary(PlaceOfPower):
             # payer 4 ressources
             print("Choisissez 4 ressources à payer :")
             for _ in range(4):
-                resource = choose_resource(player.resources.available(excluded={Resource.PEARL}))
+                resource = player.choose_resource(player.resources.available(excluded={Resource.PEARL}))
                 player.resources.remove(resource, 1)
             
             # payer le coût du dragon
@@ -152,7 +152,7 @@ class WizardBestiary(PlaceOfPower):
                 player.resources.remove(resource, amount)
             
             # retirer de la défausse et placer sur le board
-            owner_discard.discard.remove(card)
+            owner.discard.remove(card)
             player.board.append(card)
             print(f"{player.name} récupère {card.name} et le place sur son plateau.")
             self.tap()

@@ -1,6 +1,6 @@
 from utils.resource_pool import ResourcePool
 from utils.constant import Resource
-from cli.input_handler import choose_resource
+# from cli.input_handler import choose_resource
 from itertools import combinations_with_replacement
 
 class Player:
@@ -15,7 +15,6 @@ class Player:
         self.board = []
         self.discard = []
         self.object = None
-        self.available_actions = []
         # bonus points pour les points additionnel de réaction
         self.bonus_points = 0
     
@@ -79,7 +78,6 @@ class Player:
         
         return False
 
-
     def can_afford(self, ability):
         """Check si le joueur peut faire le pouvoir d'une carte
 
@@ -97,11 +95,15 @@ class Player:
             int: Score total (perles + cartes)
         """
         score = 0
-        
         # Points des perles
         pearl_count = self.resources.resources[Resource.PEARL]
         if isinstance(pearl_count, (int, float)):
             score += pearl_count
+        
+        # Ajout des perles sur les cartes
+        pearl_on_cards = sum([c.resources_on.get_amount(Resource.PEARL)
+                              for c in self.board])
+        score += pearl_on_cards
         
         # Points des cartes
         for card in self.board:
@@ -114,3 +116,32 @@ class Player:
                 print(f"⚠️ Erreur dans score de {card.name}: {e}")
         
         return int(score) + self.bonus_points
+
+    # --- Méthodes de décision ---
+    # Ces méthodes sont à implémenter dans HumanPlayer et AIPlayer.
+    # Elles représentent tous les moments où on demande quelque chose à un joueur.
+ 
+    def choose_card(self, choices):
+        """Choisir une carte parmi une liste."""
+        raise NotImplementedError
+ 
+    def choose_resource(self, choices):
+        """Choisir une ressource parmi une liste."""
+        raise NotImplementedError
+ 
+    def choose_action(self, actions):
+        """Choisir une action parmi la liste des actions disponibles."""
+        raise NotImplementedError
+
+    def choose_option(self, options):
+        """Choisir parmi une liste d'options textuelles.
+        """
+        raise NotImplementedError
+    
+    def choose_yes_no(self, question):
+        """Choisir oui ou non.
+        
+        Returns:
+            bool: True si oui, False si non
+        """
+        raise NotImplementedError

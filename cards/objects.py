@@ -1,6 +1,6 @@
 from cards.base_card import Card
 from utils.constant import Resource, GameEvent, CardType
-from cli.input_handler import choose_resource, choose_card
+# from cli.input_handler import choose_resource, choose_card
 from game.action import Action
 from game.ability import Ability
 
@@ -15,7 +15,7 @@ class CalmElan(Obj):
     
     def collect_base(self, state, player):
         print(f"{player.name}, choisissez une ressource à collecter (Calm / Elan) :")
-        resource = choose_resource([Resource.CALM, Resource.ELAN])
+        resource = player.choose_resource([Resource.CALM, Resource.ELAN])
         player.resources.add(resource, 1)
 
 
@@ -25,7 +25,7 @@ class DeathLife(Obj):
     
     def collect_base(self, state, player):
         print(f"{player.name}, choisissez une ressource à collecter (Death / Life) :")
-        resource = choose_resource([Resource.DEATH, Resource.LIFE])
+        resource = player.choose_resource([Resource.DEATH, Resource.LIFE])
         player.resources.add(resource, 1)
 
 
@@ -36,10 +36,9 @@ class Reanimate(Obj):
     def get_abilities(self):
         def effect(state, player):
             print("Choisissez la ressource à payer: ")
-            resource = choose_resource(player.resources.available(excluded={Resource.ANY, Resource.PEARL}))
+            resource = player.choose_resource(player.resources.available(excluded={Resource.PEARL}))
             player.resources.remove(resource, 1)
             
-
             tapped = [card for card in player.board if card.is_tapped]
             if not tapped:
                 print("Aucune carte engagée.")
@@ -47,7 +46,7 @@ class Reanimate(Obj):
                 return
             
             print("Choisissez une carte à désengager: ")
-            card = choose_card(tapped)
+            card = player.choose_card(tapped)
             card.untap()
             self.tap()
 
@@ -63,7 +62,7 @@ class Alchemy(Obj):
         def effect(state, player):
             print("Choisissez 4 ressources à payer :")
             for _ in range(4):
-                resource = choose_resource(player.resources.available(excluded={Resource.ANY, Resource.PEARL}))
+                resource = player.choose_resource(player.resources.available(excluded={Resource.PEARL}))
                 player.resources.remove(resource, 1)
             player.resources.add(Resource.GOLD, 2)
             self.tap()
@@ -114,7 +113,7 @@ class Divination(Obj):
             # défausser autant qu'on a pioché
             print(f"Choisissez {nb} carte(s) à défausser :")
             for _ in range(nb):
-                card = choose_card(player.hand)
+                card = player.choose_card(player.hand)
                 player.hand.remove(card)
                 player.discard.append(card)
                 print(f"{player.name} défausse {card.name}")
@@ -134,7 +133,7 @@ class Research(Obj):
                 print(f"{player.name} n'a plus de cartes dans sa pioche.")
                 return
             
-            resource = choose_resource(player.resources.available())
+            resource = player.choose_resource(player.resources.available())
             player.resources.remove(resource, 1)
             
             card = player.deck.pop(0)
@@ -153,14 +152,14 @@ class Transmutation(Obj):
         def effect(state, player):
             print("Choisissez 3 ressources à payer :")
             for _ in range(3):
-                resource = choose_resource(player.resources.available(excluded={Resource.PEARL}))
+                resource = player.choose_resource(player.resources.available(excluded={Resource.PEARL}))
                 player.resources.remove(resource, 1)
             
             excluded = {Resource.GOLD, Resource.PEARL}
             choices = [r for r in Resource.real() if r not in excluded]
             print("Choisissez 3 ressources à recevoir :")
             for _ in range(3):
-                resource = choose_resource(choices)
+                resource = player.choose_resource(choices)
                 player.resources.add(resource, 1)
             
             self.tap()
@@ -182,7 +181,7 @@ class Calcination(Obj):
         def effect(state, player):
             print("Choisissez 3 ressources à payer :")
             for _ in range(3):
-                resource = choose_resource(player.resources.available(excluded={Resource.PEARL}))
+                resource = player.choose_resource(player.resources.available(excluded={Resource.PEARL}))
                 player.resources.remove(resource, 1)
             
             player.resources.add(Resource.PEARL, 1)
@@ -202,12 +201,12 @@ class Inscription(Obj):
                 print("Aucun parchemin disponible.")
                 return
             
-            print("Choisissez un parchemin :")
-            scroll = choose_card(state.engine.available_scrolls)
-            
             print("Choisissez une ressource à payer :")
-            resource = choose_resource(player.resources.available(excluded={Resource.PEARL}))
+            resource = player.choose_resource(player.resources.available(excluded={Resource.PEARL}))
             player.resources.remove(resource, 1)
+
+            print("Choisissez un parchemin :")
+            scroll = player.choose_card(state.engine.available_scrolls)
             
             state.engine.available_scrolls.remove(scroll)
             player.board.append(scroll)

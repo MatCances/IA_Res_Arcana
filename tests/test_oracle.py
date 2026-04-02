@@ -2,14 +2,14 @@ import pytest
 from unittest.mock import patch
 from cards.monuments import Oracle
 from game.game_state import GameState
-from game.player import Player
+from game.human_player import HumanPlayer
 from cards.artifacts import ElementaryShard, Phoenix, LightFlask
 from utils.constant import Resource
 
 
 @pytest.fixture
 def setup():
-    player = Player("Alice")
+    player = HumanPlayer("Alice")
     state = GameState([player])
     oracle = Oracle()
     card1 = ElementaryShard()

@@ -3,7 +3,7 @@ from unittest.mock import patch
 from cards.place_of_power import WizardBestiary
 from cards.artifacts import BoneDragon
 from cards.monuments import SacredStatue
-from game.player import Player
+from game.human_player import HumanPlayer
 from game.engine import Engine
 from utils.constant import Resource, CardType
 from cards.base_card import Card
@@ -11,8 +11,8 @@ from cards.base_card import Card
 
 @pytest.fixture
 def setup():
-    player1 = Player("Alice")
-    player2 = Player("Bob")
+    player1 = HumanPlayer("Alice")
+    player2 = HumanPlayer("Bob")
     engine = Engine(players=[player1, player2], mages=[], artifacts=[], monuments=[], places_of_power=[], objects=[], scrolls=[])
     engine.state.engine = engine
     bestiary = WizardBestiary()

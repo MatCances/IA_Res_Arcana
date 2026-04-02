@@ -3,14 +3,14 @@ from unittest.mock import patch
 from cards.artifacts import DragonEgg, BoneDragon
 from cards.mages import Artificer, Draconist
 from game.game_state import GameState
-from game.player import Player
+from game.human_player import HumanPlayer
 from game.engine import Engine
 from utils.constant import Resource
 
 
 @pytest.fixture
 def setup():
-    player = Player("Alice")
+    player = HumanPlayer("Alice")
     engine = Engine(players=[player], mages=[], artifacts=[], monuments=[], places_of_power=[], objects=[], scrolls=[])
     engine.state.engine = engine
     egg = DragonEgg()

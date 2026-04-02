@@ -3,13 +3,13 @@ from unittest.mock import patch, MagicMock
 from cards.objects import Inscription
 from cards.scrolls import Vitality
 from game.game_state import GameState
-from game.player import Player
+from game.human_player import HumanPlayer
 from utils.constant import Resource
 
 
 @pytest.fixture
 def setup():
-    player = Player("Alice")
+    player = HumanPlayer("Alice")
     state = GameState([player])
     obj = Inscription()
     scroll = Vitality()

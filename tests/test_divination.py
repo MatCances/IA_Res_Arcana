@@ -3,13 +3,13 @@ from unittest.mock import patch
 from cards.objects import Divination
 from cards.artifacts import ElementaryShard, Phoenix, LightFlask
 from game.game_state import GameState
-from game.player import Player
+from game.human_player import HumanPlayer
 from utils.constant import Resource
 
 
 @pytest.fixture
 def setup():
-    player = Player("Alice")
+    player = HumanPlayer("Alice")
     state = GameState([player])
     obj = Divination()
     card1 = ElementaryShard()

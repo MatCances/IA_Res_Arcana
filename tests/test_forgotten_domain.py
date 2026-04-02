@@ -2,14 +2,14 @@ import pytest
 from unittest.mock import patch
 from cards.monuments import ForgottenDomain, Obelisc
 from game.game_state import GameState
-from game.player import Player
+from game.human_player import HumanPlayer
 from utils.constant import GameEvent, Resource
 
 # Prepare le setup pour chaque tests dans ce fichier
 @pytest.fixture
 def setup():
-    player1 = Player("Alice")
-    player2 = Player("Bob")
+    player1 = HumanPlayer("Alice")
+    player2 = HumanPlayer("Bob")
     state = GameState([player1, player2])
     domain = ForgottenDomain()
     obelisc = Obelisc()

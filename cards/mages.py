@@ -2,7 +2,7 @@ from cards.base_card import Card
 from utils.constant import Resource, CardType, GameEvent
 from game.action import Action
 from game.ability import Ability
-from cli.input_handler import choose_resource, choose_card
+# from cli.input_handler import choose_resource, choose_card
 
 class Mage(Card):
     def __init__(self, name):
@@ -16,7 +16,7 @@ class Alchemist(Mage):
     def get_abilities(self):
         def effect1(state, player):
             print("Obtenez 1 ressource :")
-            resource = choose_resource([r for r in Resource.real() if r != Resource.PEARL])
+            resource = player.choose_resource([r for r in Resource.real() if r != Resource.PEARL])
             player.resources.add(resource, 1)
             self.tap()
 
@@ -24,7 +24,7 @@ class Alchemist(Mage):
             print("Choisissez 4 ressources à payer :")
             for _ in range(4):
                 
-                resource = choose_resource(list(Resource.real()))
+                resource = player.choose_resource(list(Resource.real()))
                 player.resources.remove(resource, 1)
             player.resources.add(Resource.GOLD, 2)
             self.tap()
@@ -82,7 +82,7 @@ class Illusionist(Mage):
         choices = [r for r in Resource.real() if r not in excluded]
         
         print("Illusionist : choisissez une ressource à collecter :")
-        resource = choose_resource(choices)
+        resource = player.choose_resource(choices)
         player.resources.add(resource, 1)
     
     def get_abilities(self):
@@ -99,7 +99,7 @@ class Erudite(Mage):
                 print(f"{player.name} n'a plus de cartes dans sa pioche.")
                 return
             
-            resource = choose_resource(player.resources.available())
+            resource = player.choose_resource(player.resources.available())
             player.resources.remove(resource, 1)
             
             card = player.deck.pop(0)
@@ -128,7 +128,7 @@ class Distiller(Mage):
             
             print("Choisissez une ressource à payer :")
             excluded = {Resource.PEARL}
-            resource = choose_resource(player.resources.available(excluded=excluded))
+            resource = player.choose_resource(player.resources.available(excluded=excluded))
             player.resources.remove(resource, 1)
 
             if not player.board:
@@ -136,7 +136,7 @@ class Distiller(Mage):
                 return
             
             print("Choisissez une carte sur laquelle poser la ressource :")
-            card = choose_card(player.board)
+            card = player.choose_card(player.board)
             card.resources_on.add(resource, 1)
             print(f"{resource.value} posé sur {card.name}")
             self.tap()
@@ -152,7 +152,7 @@ class Distiller(Mage):
                 return
             
             print("Choisissez une carte sur laquelle poser la perle :")
-            card = choose_card(player.board)
+            card = player.choose_card(player.board)
             card.resources_on.add(Resource.PEARL, 1)
             print(f"pearl posé sur {card.name}")
             self.tap()
@@ -178,7 +178,7 @@ class Demonist(Mage):
             
             player.resources.remove(Resource.LIFE, 1)
             print("Choisissez une carte à récupérer :")
-            card = choose_card(player.discard)
+            card = player.choose_card(player.discard)
             player.discard.remove(card)
             player.hand.append(card)
             print(f"{player.name} récupère {card.name}")
@@ -192,7 +192,7 @@ class Demonist(Mage):
                 return
             
             print("Choisissez un démon à désengager: ")
-            card = choose_card(tapped)
+            card = player.choose_card(tapped)
             card.untap()
             self.tap()
         
@@ -219,7 +219,7 @@ class Tamer(Mage):
                 return
 
             print("Choisissez une créature à engager: ")
-            card = choose_card(untapped)
+            card = player.choose_card(untapped)
             card.tap()
             self.tap()
 
@@ -238,7 +238,7 @@ class Bard(Mage):
             choices = [r for r in Resource.real() if r not in excluded]
 
             print("Choisissez une ressource: ")
-            resource = choose_resource(choices)
+            resource = player.choose_resource(choices)
             player.resources.add(resource, 1)
             self.tap()
 
@@ -251,7 +251,7 @@ class Bard(Mage):
                 return
             
             print("Choisissez un démon/dragon/créature à défausser")
-            card = choose_card(hand_with_type)
+            card = player.choose_card(hand_with_type)
             player.hand.remove(card)
             player.discard.append(card)
             player.resources.add(Resource.GOLD, 2)
@@ -347,7 +347,7 @@ class Druidess(Mage):
                 self.tap()
                 return
             
-            card = choose_card(tapped_creature)
+            card = player.choose_card(tapped_creature)
             card.untap()
             self.tap()
 
@@ -361,14 +361,14 @@ class Witch(Mage):
     def collect_base(self, state, player):
         choices = {Resource.LIFE, Resource.DEATH}
         print("Sorcière : choisissez une ressource à collecter :")
-        resource = choose_resource(choices)
+        resource = player.choose_resource(choices)
         player.resources.add(resource, 1)
 
     def get_abilities(self):
         def effect(state, player):
             print("Choisissez 2 ressources à payer :")
             for _ in range(2):
-                resource = choose_resource(player.resources.available(excluded={Resource.ANY, Resource.PEARL}))
+                resource = player.choose_resource(player.resources.available(excluded={Resource.ANY, Resource.PEARL}))
                 player.resources.remove(resource, 1)
             
             tapped = [card for card in player.board if card.is_tapped]
@@ -378,7 +378,7 @@ class Witch(Mage):
                 return
             
             print("Choisissez une carte à désengager: ")
-            card = choose_card(tapped)
+            card = player.choose_card(tapped)
             card.untap()
             self.tap()
 
@@ -409,7 +409,7 @@ class SoothSayer(Mage):
             # défausser autant qu'on a pioché
             print(f"Choisissez {nb} carte(s) à défausser :")
             for _ in range(nb):
-                card = choose_card(player.hand)
+                card = player.choose_card(player.hand)
                 player.hand.remove(card)
                 player.discard.append(card)
                 print(f"{player.name} défausse {card.name}")
@@ -427,14 +427,14 @@ class Transmuter(Mage):
         def effect(state, player):
             print("Choisissez 2 ressources à payer :")
             for _ in range(2):
-                resource = choose_resource(player.resources.available(excluded={Resource.PEARL}))
+                resource = player.choose_resource(player.resources.available(excluded={Resource.PEARL}))
                 player.resources.remove(resource, 1)
             
             excluded = {Resource.GOLD, Resource.PEARL}
             choices = [r for r in Resource.real() if r not in excluded]
             print("Choisissez 3 ressources à recevoir :")
             for _ in range(3):
-                resource = choose_resource(choices)
+                resource = player.choose_resource(choices)
                 player.resources.add(resource, 1)
             
             self.tap()
@@ -449,7 +449,7 @@ class Healer(Mage):
     def collect_base(self, state, player):
         choices = (Resource.CALM, Resource.LIFE)
         print("Guérisseur : choisissez une ressource à collecter :")
-        resource = choose_resource(choices)
+        resource = player.choose_resource(choices)
         player.resources.add(resource, 1)
     
     def on_event(self, event, state, source_player, **kwargs):
@@ -496,7 +496,7 @@ class Draconist(Mage):
                 return
 
             print("Choisissez un dragon de votre main:")
-            dragon = choose_card(choices)
+            dragon = player.choose_card(choices)
             self.reduction_effect = {"value": 2,
                                      "excluded": [Resource.PEARL],
                                      "card_type": [CardType.DRAGON]}
@@ -514,7 +514,7 @@ class Draconist(Mage):
             print(f"Choisissez {reduced_cost} ressources à payer: ")
             choices = [r for r, _ in dragon.cost.items()]
             for _ in range(reduced_cost):
-                resource = choose_resource(choices)
+                resource = player.choose_resource(choices)
                 player.resources.remove(resource, 1)
                 # Update le choix des ressources si elles tombent à 0 lorsque le joueur choisit
                 choices = [r for r, _ in dragon.cost.items() if player.resources.has(r, 1)]
@@ -532,7 +532,7 @@ class Draconist(Mage):
                 return
 
             print("Choisissez un dragon à revive:")
-            dragon = choose_card(choices)
+            dragon = player.choose_card(choices)
             dragon.untap()
             self.tap()
             print(f"{player.name} réanime {dragon.name} avec {self.name}")

@@ -2,13 +2,13 @@ import pytest
 from unittest.mock import patch
 from cards.monuments import SacredStatue
 from game.game_state import GameState
-from game.player import Player
+from game.human_player import HumanPlayer
 from utils.constant import Resource, GameEvent
 
 
 @pytest.fixture
 def setup():
-    player = Player("Alice")
+    player = HumanPlayer("Alice")
     state = GameState([player])
     statue = SacredStatue()
     player.board.append(statue)

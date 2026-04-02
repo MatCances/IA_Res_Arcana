@@ -4,15 +4,15 @@ from cards.artifacts import BoneDragon
 from cards.monuments import GreatWall
 from game.game_state import GameState
 from game.engine import Engine
-from game.player import Player
+from game.human_player import HumanPlayer
 from cards.mages import Alchemist
 from utils.constant import Resource, GameEvent
 
 
 @pytest.fixture
 def setup():
-    player1 = Player("Alice")
-    player2 = Player("Bob")
+    player1 = HumanPlayer("Alice")
+    player2 = HumanPlayer("Bob")
     player1.mage = Alchemist()
     player2.mage = Alchemist()
     engine = Engine(

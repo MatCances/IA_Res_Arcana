@@ -1,8 +1,16 @@
 import random as rd
+from cards.artifacts import Moloss
 from game.game_state import GameState
-from cli.input_handler import choose_resource, choose_action, available_actions
+# from cli.input_handler import available_actions #, choose_action, choose_resource
 from cli.display import display_state
 from utils.constant import Resource, GameEvent
+from game.action import (action_pass,
+                         action_discard,
+                         action_play_artifact,
+                         action_use_ability,
+                         action_buy_monument,
+                         action_buy_monument_from_deck,
+                         action_buy_place_of_power)
 
 
 WINNING_SCORE = 13
@@ -84,16 +92,12 @@ class Engine:
                     hand = hands[idx]
                     if not hand:
                         continue
+
                     print(f"\n{player.name}, choisissez une carte :")
-                    for i, card in enumerate(hand):
-                        print(f"  {i+1} - {card.name}")
-                    choice = 0
-                    while choice < 1 or choice > len(hand):
-                        try:
-                            choice = int(input("Numéro de la carte : "))
-                        except ValueError:
-                            pass
-                    player.hand.append(hand.pop(choice - 1))
+                    chosen = player.choose_card(hand)
+                    hand.remove(chosen)
+                    player.hand.append(chosen)
+
                     # passe les cartes restantes au joueur suivant
                     next_idx = (idx + 1) % len(self.state.players)
                     new_hands[next_idx].extend(hand)
@@ -118,16 +122,10 @@ class Engine:
 
     def _choose_mages(self):
         for player in self.state.players:
+
             print(f"\n{player.name}, choisissez votre mage :")
-            for i, mage in enumerate(player.mage_choices):
-                print(f"  {i+1} - {mage.name}")
-            choice = 0
-            while choice < 1 or choice > len(player.mage_choices):
-                try:
-                    choice = int(input("Numéro du mage : "))
-                except ValueError:
-                    pass
-            chosen_mage = player.mage_choices[choice - 1]
+            chosen_mage = player.choose_card(player.mage_choices)
+
             player.set_mage(chosen_mage)
             player.board.append(chosen_mage)
             print(f"{player.name} choisit {player.mage.name}")
@@ -137,23 +135,15 @@ class Engine:
         n = len(self.state.players)
         order = [(self.state.current_player - 1 - i) % n for i in range(n)]
         print("\n+===== CHOIX DES OBJETS =====")
-        print("Objets disponibles :")
-        for i, obj in enumerate(self.available_objects):
-            print(f"  {i+1} - {obj.name}")
         for idx in order:
             player = self.state.players[idx]
+
             print(f"\n{player.name}, choisissez un objet :")
-            for i, obj in enumerate(self.available_objects):
-                print(f"  {i+1} - {obj.name}")
-            choice = 0
-            while choice < 1 or choice > len(self.available_objects):
-                try:
-                    choice = int(input("Numéro de l'objet : "))
-                except ValueError:
-                    pass
-            chosen = self.available_objects.pop(choice - 1)
+            chosen = player.choose_card(self.available_objects)
+            self.available_objects.remove(chosen)
             player.object = chosen
             player.board.append(chosen)
+
             print(f"{player.name} choisit {chosen.name}")
     
     def dispatch_event(self, event, source_player, **kwargs):
@@ -215,7 +205,7 @@ class Engine:
                 if not available:
                     print("Plus aucune ressource disponible !")
                     break
-                resource = choose_resource(available)
+                resource = target.choose_resource(available)
                 target.resources.remove(resource, 1)
 
     def collect_phase(self):
@@ -247,6 +237,58 @@ class Engine:
             for card in player.board:
                 card.collect_base(self.state, player)
     
+    def available_actions(self, player):
+        """Determine les actions disponible pour le joueur player
+
+        Args:
+            player (Player): le joueur
+
+        Returns:
+            List[Action()]: la liste des actions
+        """
+        actions = []
+
+        # utiliser le pouvoir d'une carte non engagée
+        for card in player.board:
+            if not card.is_tapped:
+                for ability in card.get_abilities():
+                    if player.can_afford(ability):
+                        actions.append(action_use_ability(self.state, player, card, ability))
+
+            # Exception pour le Molosse qui à une ability justement quand elle est engagé
+            if isinstance(card, Moloss) and card.is_tapped:
+                for ability in card.get_abilities():
+                    if player.can_afford(ability):
+                        actions.append(action_use_ability(self.state, player, card, ability))
+
+        # jouer un artefact depuis la main
+        for card in player.hand:
+            if player.can_buy(card):
+                actions.append(action_play_artifact(self.state, player, card))
+        
+        # acheter un lieu de puissance
+        for place in self.state.places_of_power:
+            if player.can_buy(place):
+                actions.append(action_buy_place_of_power(self.state, player, place, dispatch=self.dispatch_event))
+
+        # défausser une carte
+        for card in player.hand:
+            actions.append(action_discard(self.state, player, card))
+        
+        # acheter un monument visible
+        for monument in self.state.monuments_visible:
+            if player.can_buy(monument):
+                actions.append(action_buy_monument(self.state, player, monument, dispatch=self.dispatch_event))
+
+        # Acheter le monument sur la pioche des monuments
+        if self.state.monuments_deck:
+            actions.append(action_buy_monument_from_deck(self.state, player, dispatch=self.dispatch_event))
+        
+        # toujours disponible
+        actions.append(action_pass(self.state, player))
+
+        return actions
+    
     def action_phase(self):
         """Étape 2 : les joueurs jouent chacun leur tour jusqu'à ce que tout le monde passe."""
         print("\n+===========================")
@@ -266,8 +308,8 @@ class Engine:
                 display_state(self.state)
                 print(f"\n --> Tour de {player.name}")
 
-                actions = available_actions(self.state, player, dispatch=self.dispatch_event)
-                action = choose_action(actions)
+                actions = self.available_actions(player)
+                action = player.choose_action(actions)
                 action.execute(self.state, player)
 
                 if action.name == "Passer le tour":
@@ -299,21 +341,17 @@ class Engine:
 
     def _exchange_object(self, player):
         """Le joueur échange son objet avec un disponible sur le plateau."""
+
         if not self.available_objects:
             print("Aucun objet disponible.")
             return
+
         print(f"\n{player.name}, échangez votre objet ({player.object.name}) :")
-        for i, obj in enumerate(self.available_objects):
-            print(f"  {i+1} - {obj.name}")
-        choice = 0
-        while choice < 1 or choice > len(self.available_objects):
-            try:
-                choice = int(input("Numéro de l'objet : "))
-            except ValueError:
-                pass
         old_object = player.object
-        player.board.remove(old_object)
-        player.object = self.available_objects.pop(choice - 1)
+        chosen = player.choose_card(self.available_objects)
+        self.available_objects.remove(chosen)
+
+        player.object = chosen
         player.board.append(player.object)
         self.available_objects.append(old_object)
         print(f"{player.name} échange {old_object.name} contre {player.object.name}")

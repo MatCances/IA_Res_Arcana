@@ -3,7 +3,7 @@ from unittest.mock import patch
 from cards.scrolls import Recovery
 from cards.artifacts import Phoenix, PlanarShadow, Homonculus
 from game.game_state import GameState
-from game.player import Player
+from game.human_player import HumanPlayer
 from game.engine import Engine
 from cards.mages import Artificer
 from utils.constant import Resource
@@ -11,7 +11,7 @@ from utils.constant import Resource
 
 @pytest.fixture
 def setup():
-    player = Player("Alice")
+    player = HumanPlayer("Alice")
     engine = Engine(players=[player], mages=[], artifacts=[], monuments=[], places_of_power=[], objects=[], scrolls=[])
     engine.state.engine = engine
     player.resources.add(Resource.ELAN, 2)
