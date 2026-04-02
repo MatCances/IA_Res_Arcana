@@ -72,3 +72,21 @@ class HumanPlayer(Player):
             except ValueError:
                 pass
         return choice == 1
+    
+    def choose_number(self, min_val, max_val):
+        """Choisi un nombre entre min_val et max_val
+
+        Args:
+            min_val (int): min
+            max_val (int): max
+
+        Returns:
+            _type_: _description_
+        """
+        choice = min_val - 1
+        while choice < min_val or choice > max_val:
+            try:
+                choice = int(input(f"Choisissez un nombre ({min_val}-{max_val}) : "))
+            except ValueError:
+                print("  ! Merci de taper un chiffre valide !")
+        return choice

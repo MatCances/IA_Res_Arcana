@@ -2,7 +2,6 @@ from cards.base_card import Card
 from utils.constant import Resource, CardType, GameEvent
 from game.action import Action
 from game.ability import Ability
-# from cli.input_handler import choose_resource, choose_card
 
 class Mage(Card):
     def __init__(self, name):
@@ -271,50 +270,39 @@ class Seer(Mage):
 
     def get_abilities(self):
         def effect(state, player):
-            print("Choisissez la pioche à consulter :")
-            print("1 - Votre pioche")
-            print("2 - La pioche des monuments")
-            choice = 0
-            while choice not in [1, 2]:
-                try:
-                    choice = int(input("Votre choix : "))
-                except ValueError:
-                    pass
-            
-            if choice == 1:
+            options = ["Votre pioche", "La pioche des monuments"]
+            choice = player.choose_option(options)
+            if choice == 0:
                 deck = player.deck
             else:
                 deck = state.monuments_deck
-            
+
             if not deck:
                 print("La pioche est vide !")
                 return
-            
+
             # piocher 3 cartes
+            # Ceci ne renvoie que 2 cartes si seulement 2 cartes sont dans la pioche
             drawn = deck[:3]
             del deck[:3]
 
             # réordonner au choix du joueur
-            print("Cartes piochées, réordonnez-les :")
             reordered = []
             remaining = drawn[:]
             while remaining:
-                for i, card in enumerate(remaining):
-                    print(f"{i+1} - {card.name}")
-                pick = 0
-                while pick < 1 or pick > len(remaining):
-                    try:
-                        pick = int(input(f"Choisissez la carte à placer en position {len(reordered) + 1} : "))
-                    except ValueError:
-                        pass
-                reordered.append(remaining.pop(pick - 1))
-            
+                print(f"Choisissez la carte à placer en position {len(reordered) + 1} :")
+                card = player.choose_card(remaining)
+                reordered.append(card)
+                remaining.remove(card)
+
             # reposer sur la pioche
             deck[:0] = reordered
             print("Cartes replacées sur la pioche dans le nouvel ordre.")
             self.tap()
         
-        return [Ability("Consulter et réordonner le top 3 d'une pioche", cost={}, effect=effect)]
+        return [Ability(f"Engager: piocher 3 cartes, les réordonner, les replacer sur la pioche",
+                        cost={},
+                        effect=effect)]
 
 
 class Duelist(Mage):
@@ -456,16 +444,7 @@ class Healer(Mage):
         if event == GameEvent.ATTACK and not self.is_tapped:
             owner = next(p for p in state.players if self in p.board)
             
-            print(f"\n[Réaction] {owner.name} : voulez-vous activer {self.name} ? (annule l'attaque, s'engage)")
-            print("1 - Oui")
-            print("2 - Non")
-            choice = 0
-            while choice not in [1, 2]:
-                try:
-                    choice = int(input("Votre choix : "))
-                except ValueError:
-                    pass
-            if choice == 1:
+            if owner.choose_yes_no(f"\n[Réaction] {owner.name} : engager {self.name} ?"):
                 self.tap()
                 kwargs.get('context')['cancelled'] = True
                 print(f"[Réaction] {self.name} : attaque annulée !")

@@ -40,15 +40,15 @@ def test_reordonne_deck_joueur(setup):
 def test_reordonne_monuments(setup):
     """Le joueur réordonne le top 3 de la pioche des monuments"""
     state, player, oracle, card1, card2, card3, card4 = setup
-    state.monuments = [card1, card2, card3, card4]
+    state.monuments_deck = [card1, card2, card3, card4]
     # choisit monuments, puis ordre : card2, card3, card1
     with patch('builtins.input', side_effect=['2', '2', '2', '1']):
         ability = oracle.get_abilities()[0]
         ability.execute(state, player)
-    assert state.monuments[0] == card2
-    assert state.monuments[1] == card3
-    assert state.monuments[2] == card1
-    assert state.monuments[3] == card4
+    assert state.monuments_deck[0] == card2
+    assert state.monuments_deck[1] == card3
+    assert state.monuments_deck[2] == card1
+    assert state.monuments_deck[3] == card4
 
 
 def test_pioche_vide(setup):

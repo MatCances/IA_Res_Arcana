@@ -1,7 +1,6 @@
 from cards.base_card import Card
 from utils.constant import Resource, GameEvent
 from game.ability import Ability
-# from cli.input_handler import choose_card, choose_resource
 
 class Scroll(Card):
     def __init__(self, name, cost):
@@ -37,16 +36,7 @@ class Shield(Scroll):
     def on_event(self, event, state, source_player, **kwargs):
         if event == GameEvent.ATTACK and not self.is_tapped:
             owner = next(p for p in state.players if self in p.board)
-            print(f"\n[Réaction] {owner.name} : voulez-vous activer Bouclier ? (annule l'attaque, retourne dans la pile)")
-            print("1 - Oui")
-            print("2 - Non")
-            choice = 0
-            while choice not in [1, 2]:
-                try:
-                    choice = int(input("Votre choix : "))
-                except ValueError:
-                    pass
-            if choice == 1:
+            if owner.choose_yes_no(f"\n[Réaction] {owner.name} : utiliser Parchemin {self.name} ?"):
                 kwargs.get('context')['cancelled'] = True
                 owner.board.remove(self)
                 state.engine.available_scrolls.append(self)
@@ -77,20 +67,16 @@ class Projection(Scroll):
     
     def get_abilities(self):
         def effect(state, player):
-            print("Choisissez une ressource à payer :")
+            print("Choisissez une ressource: ")
             resource = player.choose_resource(player.resources.available(excluded={Resource.PEARL, Resource.GOLD}))
             
-            max_x = player.resources.resources[resource] // 3
+            max_x = player.resources.get_amount(resource) // 3
             if max_x == 0:
                 print(f"Vous n'avez pas assez de {resource.value} (minimum 3).")
                 return
             
-            x = 0
-            while x < 1 or x > max_x:
-                try:
-                    x = int(input(f"Choisissez X (1-{max_x}) : "))
-                except ValueError:
-                    pass
+            print("Choisissez le nombre de GOLD à obtenir: ")
+            x = player.choose_number(1, max_x)
             
             player.resources.remove(resource, 3 * x)
             player.resources.add(Resource.GOLD, x)
@@ -186,18 +172,14 @@ class Transformation(Scroll):
     
     def get_abilities(self):
         def effect(state, player):
-            print("Choisissez la ressource à payer :")
+
+            print("Choisissez une ressource: ")
             resource_out = player.choose_resource(player.resources.available(excluded={Resource.PEARL}))
             
-            max_x = player.resources.resources[resource_out]
-            x = 0
-            while x < 1 or x > max_x:
-                try:
-                    x = int(input(f"Choisissez X (1-{max_x}) : "))
-                except ValueError:
-                    pass
+            print("Choisissez le nombre à échanger: ")
+            max_x = player.resources.get_amount(resource_out)
+            x = player.choose_number(1, max_x)
             
-            print("Choisissez la ressource à recevoir :")
             excluded = {Resource.PEARL, Resource.GOLD}
             choices = [r for r in Resource.real() if r not in excluded]
             resource_in = player.choose_resource(choices)
@@ -208,7 +190,9 @@ class Transformation(Scroll):
             player.board.remove(self)
             state.engine.available_scrolls.append(self)
         
-        return [Ability("X ressources d'un type contre X ressources d'un autre type", cost={}, effect=effect)]
+        return [Ability("X ressources d'un type contre X ressources d'un autre type",
+                        cost={Resource.ANY: 1},
+                        effect=effect)]
 
 ALL_SCROLLS = [Vitality(),
                Shield(),

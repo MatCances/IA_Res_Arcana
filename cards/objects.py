@@ -1,6 +1,5 @@
 from cards.base_card import Card
 from utils.constant import Resource, GameEvent, CardType
-# from cli.input_handler import choose_resource, choose_card
 from game.action import Action
 from game.ability import Ability
 
@@ -78,16 +77,7 @@ class Protection(Obj):
     def on_event(self, event, state, source_player, **kwargs):
         if event == GameEvent.ATTACK and not self.is_tapped:
             owner = next(p for p in state.players if self in p.board)
-            print(f"\n[Réaction] {owner.name} : voulez-vous activer {self.name} ? (annule l'attaque, s'engage)")
-            print("1 - Oui")
-            print("2 - Non")
-            choice = 0
-            while choice not in [1, 2]:
-                try:
-                    choice = int(input("Votre choix : "))
-                except ValueError:
-                    pass
-            if choice == 1:
+            if owner.choose_yes_no(f"\n[Réaction] {owner.name} : engager {self.name} ?"):
                 self.tap()
                 kwargs.get('context')['cancelled'] = True
                 print(f"[Réaction] {self.name} : attaque annulée !")

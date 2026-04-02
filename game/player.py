@@ -145,3 +145,6 @@ class Player:
             bool: True si oui, False si non
         """
         raise NotImplementedError
+    
+    def choose_number(self, min_val, max_val):
+        raise NotImplementedError

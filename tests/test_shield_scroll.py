@@ -2,7 +2,7 @@ import pytest
 from unittest.mock import patch
 from cards.scrolls import Shield
 from game.game_state import GameState
-from game.player import Player
+from game.human_player import HumanPlayer
 from game.engine import Engine
 from cards.mages import Alchemist
 from utils.constant import GameEvent, Resource
@@ -10,8 +10,8 @@ from utils.constant import GameEvent, Resource
 
 @pytest.fixture
 def setup():
-    player1 = Player("Alice")
-    player2 = Player("Bob")
+    player1 = HumanPlayer("Alice")
+    player2 = HumanPlayer("Bob")
     player1.mage = Alchemist()
     player2.mage = Alchemist()
     engine = Engine(players=[player1, player2], mages=[], artifacts=[], monuments=[], places_of_power=[], objects=[], scrolls=[])

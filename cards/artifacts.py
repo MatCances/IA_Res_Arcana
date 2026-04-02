@@ -1,7 +1,6 @@
 from cards.base_card import Card
 from utils.constant import Resource, CardType, GameEvent
 from game.ability import Ability
-# from cli.input_handler import choose_resource, choose_card
 
 
 class Artifact(Card):
@@ -94,21 +93,31 @@ class Prism(Artifact):
             self.tap()
         
         def effect2(state, player):
-            print("Choisissez la ressource source :")
-            source = player.choose_resource(player.resources.available(excluded={Resource.PEARL}))
-            amount = player.resources.resources[source]
-            if amount == 0:
-                print(f"Vous n'avez pas de {source.value}.")
-                return
-            print("Choisissez la ressource cible :")
-            cible = player.choose_resource([r for r in Resource.real() if r not in [Resource.PEARL, Resource.GOLD]])
-            player.resources.remove(source, amount)
-            player.resources.add(cible, amount)
-            print(f"{player.name} convertit {amount} {source.value} en {cible.value}.")
+
+            print("Choisissez une ressource: ")
+            resource_out = player.choose_resource(player.resources.available(excluded={Resource.PEARL}))
+            
+            print("Choisissez le nombre à échanger: ")
+            max_x = player.resources.get_amount(resource_out)
+            x = player.choose_number(1, max_x)
+            
+            excluded = {Resource.PEARL, Resource.GOLD}
+            choices = [r for r in Resource.real() if r not in excluded]
+            resource_in = player.choose_resource(choices)
+            
+            player.resources.remove(resource_out, x)
+            player.resources.add(resource_in, x)
+            print(f"{player.name} échange {x} {resource_out.value} contre {x} {resource_in.value}")
+            player.board.remove(self)
+            state.engine.available_scrolls.append(self)
             self.tap()
         
-        abilities = [Ability("1 ressource contre 2 ressources", cost={Resource.ANY: 1}, effect=effect1),
-                     Ability("Convertit toutes les ressources d'un type", cost={Resource.ANY: 1}, effect=effect2)]
+        abilities = [Ability("1 ressource contre 2 ressources",
+                             cost={Resource.ANY: 1},
+                             effect=effect1),
+                     Ability("X ressources d'un type contre X ressources d'un autre type",
+                             cost={Resource.ANY: 1},
+                             effect=effect2)]
         return abilities
 
 
@@ -121,16 +130,7 @@ class LightFlask(Artifact):
     def on_event(self, event, state, source_player, **kwargs):
         if event == GameEvent.DESTROY_ARTIFACT:
             owner = next(p for p in state.players if self in p.board)
-            print(f"\n[Réaction] {owner.name} : voulez-vous activer {self.name} ?")
-            print("1 - Oui")
-            print("2 - Non")
-            choice = 0
-            while choice not in [1, 2]:
-                try:
-                    choice = int(input("Votre choix : "))
-                except ValueError:
-                    pass
-            if choice == 1:
+            if owner.choose_yes_no(f"[Réaction] Voulez-vous activer {self.name} ?"):
                 excluded = {Resource.DEATH, Resource.GOLD, Resource.PEARL}
                 choices = [r for r in Resource.real() if r not in excluded]
                 resource = owner.choose_resource(choices)
@@ -320,23 +320,14 @@ class BoneDragon(Artifact):
             for target in targets:
                 # proposer l'esquive avec 1 DEATH
                 if target.resources.has(Resource.DEATH, 1):
-                    print(f"\n{target.name}, voulez-vous esquiver en payant 1 DEATH ?")
-                    print("1 - Oui")
-                    print("2 - Non")
-                    choice = 0
-                    while choice not in [1, 2]:
-                        try:
-                            choice = int(input("Votre choix : "))
-                        except ValueError:
-                            pass
-                    if choice == 1:
+                    if target.choose_yes_no(f"\n{target.name}, esquiver en payant 1 DEATH ?"):
                         target.resources.remove(Resource.DEATH, 1)
                         print(f"{target.name} esquive l'attaque !")
-                        continue
+                        continue  # continue la boucle directement ici
                 
                 # sinon résoudre l'attaque
                 state.engine.resolve_attack(target, damage=2)
-            
+
             self.tap()
         
         return [Ability("Attaquer tous les adversaires (2 dégâts)", cost={}, effect=effect)]
@@ -525,16 +516,7 @@ class DurtDragon(Artifact):
             for target in targets:
                 # proposer l'esquive avec 1 GOLD
                 if target.resources.has(Resource.GOLD, 1):
-                    print(f"\n{target.name}, voulez-vous esquiver en payant 1 GOLD ?")
-                    print("1 - Oui")
-                    print("2 - Non")
-                    choice = 0
-                    while choice not in [1, 2]:
-                        try:
-                            choice = int(input("Votre choix : "))
-                        except ValueError:
-                            pass
-                    if choice == 1:
+                    if target.choose_yes_no(f"\n{target.name}, esquiver en payant 1 GOLD ?"):
                         target.resources.remove(Resource.GOLD, 1)
                         print(f"{target.name} esquive l'attaque !")
                         continue
@@ -561,16 +543,8 @@ class Dolfin(Artifact):
             owner = next(p for p in state.players if self in p.board)
             if not owner.resources.has(Resource.CALM, 1):
                 return
-            print(f"\n[Réaction] {owner.name} : voulez-vous activer {self.name} ? (1 CALM)")
-            print("1 - Oui")
-            print("2 - Non")
-            choice = 0
-            while choice not in [1, 2]:
-                try:
-                    choice = int(input("Votre choix : "))
-                except ValueError:
-                    pass
-            if choice == 1:
+            
+            if owner.choose_yes_no(f"\n[Réaction] {owner.name} : utiliser {self.name} ? (1 CALM)"):
                 owner.resources.remove(Resource.CALM, 1)
                 kwargs.get('context')['cancelled'] = True
                 print(f"[Réaction] {self.name} : attaque annulée !")
@@ -629,24 +603,17 @@ class Shrivatsa(Artifact):
     
     def collect_base(self, state, player):
         if Resource.PEARL in self.resources_on.available():
-            print(f"{self.name}: Collecter 1 GOLD ou 2 ressources au choix ?")
-            print("1 - +1 GOLD")
-            print("2 - +2 Ressources au choix")
-            choice = 0
-            while choice not in [1, 2]:
-                try:
-                    choice = int(input("Votre choix : "))
-                except ValueError:
-                    pass
-            if choice == 1:
+            
+            options = ["Recevoir 2 ressources", "Recevoir 1 GOLD"]
+            choix = player.choose_option(options)
+
+            if choix == 1:
                 player.resources.add(Resource.GOLD, 1)
-            elif choice == 2:
-                print("Choisissez 2 ressources")
-                excluded = [Resource.PEARL, Resource.GOLD]
-                choices = [r for r in Resource.real() if r not in excluded]
+            elif choix == 0:
                 for _ in range(2):
-                    res = player.choose_resource(choices)
-                    player.resources.add(res, 1)
+                    resource = player.choose_resource([r for r in Resource.real()
+                                                       if r not in {Resource.PEARL, Resource.GOLD}])
+                    player.resources.add(resource, 1)
     
     def get_abilities(self):
         def effect(state, player):
@@ -696,22 +663,14 @@ class Moloss(Artifact):
     def on_event(self, event, state, source_player, **kwargs):
         if event == GameEvent.ATTACK:
             owner = next(p for p in state.players if self in p.board)
-            print(f"\n[Réaction] {owner.name} : voulez-vous engager {self.name} ?")
-            print("1 - Oui")
-            print("2 - Non")
-            choice = 0
-            while choice not in [1, 2]:
-                try:
-                    choice = int(input("Votre choix : "))
-                except ValueError:
-                    pass
-            if choice == 1:
+            if owner.choose_yes_no(f"\n[Réaction] {owner.name} : engager {self.name} ?"):
+                kwargs.get('context')['cancelled'] = True
                 self.tap()
 
     def get_abilities(self):
         # Cet effet doit se faire justement si la carte est engagé.
         # Le problème c'est que get_abilities n'est appelé que si la carte n'est pas engagé
-        # j'ai géré ca dans le input handler, exception pour le Molosse
+        # j'ai géré ca dans le engine, exception pour le Molosse
         def effect(state, player):
             player.resources.remove(Resource.ELAN, 1)
             self.untap()
@@ -737,16 +696,7 @@ class FireDragon(Artifact):
             for target in targets:
                 # proposer l'esquive avec 1 CALM
                 if target.resources.has(Resource.CALM, 1):
-                    print(f"\n{target.name}, voulez-vous esquiver en payant 1 CALM ?")
-                    print("1 - Oui")
-                    print("2 - Non")
-                    choice = 0
-                    while choice not in [1, 2]:
-                        try:
-                            choice = int(input("Votre choix : "))
-                        except ValueError:
-                            pass
-                    if choice == 1:
+                    if target.choose_yes_no(f"\n{target.name}, esquiver en payant 1 CALM ?"):
                         target.resources.remove(Resource.CALM, 1)
                         print(f"{target.name} esquive l'attaque !")
                         continue
@@ -773,16 +723,8 @@ class KeenSword(Artifact):
             owner = next(p for p in state.players if self in p.board)
             if not owner.resources.has(Resource.ELAN, 1):
                 return
-            print(f"\n[Réaction] {owner.name} : voulez-vous activer {self.name} ? (1 ELAN, pose 1 DEATH sur la carte)")
-            print("1 - Oui")
-            print("2 - Non")
-            choice = 0
-            while choice not in [1, 2]:
-                try:
-                    choice = int(input("Votre choix : "))
-                except ValueError:
-                    pass
-            if choice == 1:
+            
+            if owner.choose_yes_no(f"\n[Réaction] {owner.name} : activer {self.name} ? (-1 ELAN, +1 DEATH sur la carte)"):
                 owner.resources.remove(Resource.ELAN, 1)
                 self.resources_on.add(Resource.DEATH, 1)
                 kwargs.get('context')['cancelled'] = True
@@ -808,16 +750,8 @@ class GoldLion(Artifact):
             owner = next(p for p in state.players if self in p.board)
             if not owner.resources.has(Resource.ELAN, 1):
                 return
-            print(f"\n[Réaction] {owner.name} : voulez-vous engager {self.name} ?")
-            print("1 - Oui")
-            print("2 - Non")
-            choice = 0
-            while choice not in [1, 2]:
-                try:
-                    choice = int(input("Votre choix : "))
-                except ValueError:
-                    pass
-            if choice == 1:
+            
+            if owner.choose_yes_no(f"\n[Réaction] {owner.name} : engager {self.name} ?"):
                 self.tap()
                 kwargs.get('context')['cancelled'] = True
                 print(f"[Réaction] {self.name} : attaque annulée !")
@@ -837,16 +771,8 @@ class LifeChalice(Artifact):
             owner = next(p for p in state.players if self in p.board)
             if not owner.resources.has(Resource.ELAN, 1):
                 return
-            print(f"\n[Réaction] {owner.name} : voulez-vous engager {self.name} ?")
-            print("1 - Oui")
-            print("2 - Non")
-            choice = 0
-            while choice not in [1, 2]:
-                try:
-                    choice = int(input("Votre choix : "))
-                except ValueError:
-                    pass
-            if choice == 1:
+            
+            if owner.choose_yes_no(f"\n[Réaction] {owner.name} : engager {self.name} ?"):
                 self.tap()
                 kwargs.get('context')['cancelled'] = True
                 print(f"[Réaction] {self.name} : attaque annulée !")
@@ -922,32 +848,28 @@ class OldDragon(Artifact):
         def effect(state, player):
             targets = [p for p in state.players if p != player]
             for target in targets:
-                # proposer l'esquive avec 2 GOLD ou 1 PEARL
-                if target.resources.has(Resource.GOLD, 2) or target.resources.has(Resource.PEARL, 1):
-                    print(f"\n{target.name}, voulez-vous esquiver en payant 2 GOLD ou 1 PEARL ?")
-                    print("1 - Oui 2 GOLD")
-                    print("2 - Oui 1 PEARL")
-                    print("3 - Non")
-                    choice = 0
-                    while choice not in [1, 2, 3]:
-                        try:
-                            choice = int(input("Votre choix : "))
-                        except ValueError:
-                            pass
-                    if choice == 1:
-                        target.resources.remove(Resource.GOLD, 2)
-                        print(f"{target.name} esquive l'attaque !")
-                        continue
-                    elif choice == 2:
-                        target.resources.remove(Resource.PEARL, 1)
-                        print(f"{target.name} esquive l'attaque !")
-                        continue
-                
-                # sinon résoudre l'attaque
+                options = []
+                if target.resources.has(Resource.GOLD, 2):
+                    options.append("Esquiver en payant 2 GOLD")
+                if target.resources.has(Resource.PEARL, 1):
+                    options.append("Esquiver en payant 1 PEARL")
+                options.append("Ne pas esquiver")
+
+                choice = target.choose_option(options)
+                chosen = options[choice]
+                if chosen == "Esquiver en payant 2 GOLD":
+                    target.resources.remove(Resource.GOLD, 2)
+                    print(f"{target.name} esquive l'attaque !")
+                    continue
+                elif chosen == "Esquiver en payant 1 PEARL":
+                    target.resources.remove(Resource.PEARL, 1)
+                    print(f"{target.name} esquive l'attaque !")
+                    continue
+
                 state.engine.resolve_attack(target, damage=3)
-            
+
             self.tap()
-        
+
         return [Ability("Attaquer tous les adversaires (3 dégâts)", cost={}, effect=effect)]
 
 
@@ -1212,16 +1134,7 @@ class SeaSnake(Artifact):
                 # proposer l'esquive en détruisant un artefact
                 available_artifacts = [c for c in target.board if isinstance(c, Artifact)]
                 if available_artifacts:
-                    print(f"\n{target.name}, voulez-vous esquiver en détruisant un Artefact ?")
-                    print("1 - Oui")
-                    print("2 - Non")
-                    choice = 0
-                    while choice not in [1, 2]:
-                        try:
-                            choice = int(input("Votre choix : "))
-                        except ValueError:
-                            pass
-                    if choice == 1:
+                    if target.choose_yes_no(f"\n{target.name}, esquiver en détruisant un Artefact ?"):
                         print(f"{target.name} choisissez un Artefact à détruire")
                         art = player.choose_card(available_artifacts)
                         art.destroy(state, target)
@@ -1325,51 +1238,35 @@ class SinanCompass(Artifact):
             self.tap()
         
         def effect2(state, player):
-            print("Choisissez la pioche à consulter :")
-            print("1 - Votre pioche")
-            print("2 - La pioche des monuments")
-            choice = 0
-            while choice not in [1, 2]:
-                try:
-                    choice = int(input("Votre choix : "))
-                except ValueError:
-                    pass
-            
-            if choice == 1:
+            options = ["Votre pioche", "La pioche des monuments"]
+            choice = player.choose_option(options)
+            if choice == 0:
                 deck = player.deck
             else:
                 deck = state.monuments_deck
-            
+
             if not deck:
                 print("La pioche est vide !")
                 return
-            
+
             # piocher 3 cartes
+            # Ceci ne renvoie que 2 cartes si seulement 2 cartes sont dans la pioche
             drawn = deck[:3]
             del deck[:3]
 
             # réordonner au choix du joueur
-            print("Cartes piochées, réordonnez-les :")
             reordered = []
             remaining = drawn[:]
             while remaining:
-                for i, card in enumerate(remaining):
-                    print(f"{i+1} - {card.name}")
-                pick = 0
-                while pick < 1 or pick > len(remaining):
-                    try:
-                        pick = int(input(f"Choisissez la carte à placer en position {len(reordered) + 1} : "))
-                    except ValueError:
-                        pass
-                reordered.append(remaining.pop(pick - 1))
-            
+                print(f"Choisissez la carte à placer en position {len(reordered) + 1} :")
+                card = player.choose_card(remaining)
+                reordered.append(card)
+                remaining.remove(card)
+
             # reposer sur la pioche
             deck[:0] = reordered
             print("Cartes replacées sur la pioche dans le nouvel ordre.")
             self.tap()
-            # TODO: gérer le cas ou il ne reste que 1 ou 2 carte dans la
-            # pioche (soit monument soit pioche du joueur)
-            # Pareil sur le mage Voyante
         
         abilities = [Ability("Engager: -4 CALM, +1 PEARL, pioche une carte",
                              cost={Resource.CALM: 4},
@@ -1390,16 +1287,8 @@ class LifeTree(Artifact):
             owner = next(p for p in state.players if self in p.board)
             if not owner.resources.has(Resource.LIFE, 1):
                 return
-            print(f"\n[Réaction] {owner.name} : voulez-vous activer {self.name} ? (1 LIFE)")
-            print("1 - Oui")
-            print("2 - Non")
-            choice = 0
-            while choice not in [1, 2]:
-                try:
-                    choice = int(input("Votre choix : "))
-                except ValueError:
-                    pass
-            if choice == 1:
+            
+            if owner.choose_yes_no(f"\n[Réaction] {owner.name} : activer {self.name} ? (1 LIFE)"):
                 owner.resources.remove(Resource.LIFE, 1)
                 kwargs.get('context')['cancelled'] = True
                 print(f"[Réaction] {self.name} : attaque annulée !")
@@ -1435,16 +1324,7 @@ class SeaDragon(Artifact):
             for target in targets:
                 # proposer l'esquive avec 1 ELAN
                 if target.resources.has(Resource.ELAN, 1):
-                    print(f"\n{target.name}, voulez-vous esquiver en payant 1 ELAN ?")
-                    print("1 - Oui")
-                    print("2 - Non")
-                    choice = 0
-                    while choice not in [1, 2]:
-                        try:
-                            choice = int(input("Votre choix : "))
-                        except ValueError:
-                            pass
-                    if choice == 1:
+                    if target.choose_yes_no(f"\n{target.name}, esquiver en payant 1 ELAN ?"):
                         target.resources.remove(Resource.ELAN, 1)
                         print(f"{target.name} esquive l'attaque !")
                         continue
@@ -1473,16 +1353,7 @@ class WindDragon(Artifact):
                 # proposer l'esquive en défaussant une carte
                 available_cards = [c for c in target.hand]
                 if available_cards:
-                    print(f"\n{target.name}, voulez-vous esquiver en défaussant une carte ?")
-                    print("1 - Oui")
-                    print("2 - Non")
-                    choice = 0
-                    while choice not in [1, 2]:
-                        try:
-                            choice = int(input("Votre choix : "))
-                        except ValueError:
-                            pass
-                    if choice == 1:
+                    if target.choose_yes_no(f"\n{target.name}, esquiver en défaussant une carte ?"):
                         print(f"{target.name} choisissez une carte à défausser")
                         art = target.choose_card(available_cards)
                         art.discard(state, target)

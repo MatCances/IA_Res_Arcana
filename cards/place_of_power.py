@@ -1,7 +1,6 @@
 from cards.base_card import Card
 from utils.constant import Resource, CardType
 from game.ability import Ability
-# from cli.input_handler import choose_card, choose_resource
 
 
 class PlaceOfPower(Card):

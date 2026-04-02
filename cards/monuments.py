@@ -2,7 +2,6 @@ from cards.base_card import Card
 from utils.constant import Resource, GameEvent, CardType
 from game.action import Action
 from game.ability import Ability
-# from cli.input_handler import choose_resource, player.choose_card
 
 class Monument(Card):
     def __init__(self, name):
@@ -72,22 +71,14 @@ class ForgottenDomain(Monument):
             if kwargs.get("monument") == self:
                 return
             
-            print(f"\n[Réaction] {owner.name} : voulez-vous activer l'Autel Abyssal ? (+1 GOLD, s'engage)")
-            print("1 - Oui")
-            print("2 - Non")
-            choice = 0
-            while choice not in [1, 2]:
-                try:
-                    choice = int(input("Votre choix: "))
-                except ValueError:
-                    pass
-            if choice == 1:
+            if owner.choose_yes_no(f"\n[Réaction] {owner.name} : engager {self.name} ? (+1 GOLD sur la carte)"):
+        
                 self.resources_on.add(Resource.GOLD, 1)
                 self.tap()
                 print(f"[Réaction] {self.name} : +1 GOLD posé sur la carte (engagée)")
     
     def score(self, state, player):
-        return 1 + self.resources_on.resources[Resource.GOLD]
+        return 1 + self.resources_on.get_amount(Resource.GOLD)
 
 
 class Library(Monument):
@@ -285,26 +276,18 @@ class Pantheon(Monument):
 
 class GreatWall(Monument):
     def __init__(self):
-        super().__init__("Great Wall")
+        super().__init__("Grande Muraille")
     
     def on_event(self, event, state, source_player, **kwargs):
         if event == GameEvent.ATTACK:
             owner = next(p for p in state.players if self in p.board)
             if not owner.resources.has(Resource.ELAN, 1):
                 return
-            print(f"\n[Réaction] {owner.name} : voulez-vous activer la Grande Muraille ? (1 ELAN)")
-            print("1 - Oui")
-            print("2 - Non")
-            choice = 0
-            while choice not in [1, 2]:
-                try:
-                    choice = int(input("Votre choix : "))
-                except ValueError:
-                    pass
-            if choice == 1:
+            
+            if owner.choose_yes_no(f"\n[Réaction] {owner.name} : utiliser {self.name} ? (1 ELAN)"):
                 owner.resources.remove(Resource.ELAN, 1)
                 kwargs.get('context')['cancelled'] = True
-                print(f"[Réaction] Grande Muraille : attaque annulée !")
+                print(f"[Réaction] {self.name} : attaque annulée !")
     
     def score(self, state, player):
         return 2
@@ -316,50 +299,39 @@ class Oracle(Monument):
     
     def get_abilities(self):
         def effect(state, player):
-            print("Choisissez la pioche à consulter :")
-            print("1 - Votre pioche")
-            print("2 - La pioche des monuments")
-            choice = 0
-            while choice not in [1, 2]:
-                try:
-                    choice = int(input("Votre choix : "))
-                except ValueError:
-                    pass
-            
-            if choice == 1:
+            options = ["Votre pioche", "La pioche des monuments"]
+            choice = player.choose_option(options)
+            if choice == 0:
                 deck = player.deck
             else:
-                deck = state.monuments
-            
+                deck = state.monuments_deck
+
             if not deck:
                 print("La pioche est vide !")
                 return
-            
+
             # piocher 3 cartes
+            # Ceci ne renvoie que 2 cartes si seulement 2 cartes sont dans la pioche
             drawn = deck[:3]
             del deck[:3]
 
             # réordonner au choix du joueur
-            print("Cartes piochées, réordonnez-les :")
             reordered = []
             remaining = drawn[:]
             while remaining:
-                for i, card in enumerate(remaining):
-                    print(f"{i+1} - {card.name}")
-                pick = 0
-                while pick < 1 or pick > len(remaining):
-                    try:
-                        pick = int(input(f"Choisissez la carte à placer en position {len(reordered) + 1} : "))
-                    except ValueError:
-                        pass
-                reordered.append(remaining.pop(pick - 1))
-            
+                print(f"Choisissez la carte à placer en position {len(reordered) + 1} :")
+                card = player.choose_card(remaining)
+                reordered.append(card)
+                remaining.remove(card)
+
             # reposer sur la pioche
             deck[:0] = reordered
             print("Cartes replacées sur la pioche dans le nouvel ordre.")
             self.tap()
         
-        return [Ability("Consulter et réordonner le top 3 d'une pioche", cost={}, effect=effect)]
+        return [Ability(f"Engager: piocher 3 cartes, les réordonner, les replacer sur la pioche",
+                        cost={},
+                        effect=effect)]
     
     def score(self, state, player):
         return 2
@@ -375,19 +347,11 @@ class Temple(Monument):
     def on_event(self, event, state, source_player, **kwargs):
         if event == GameEvent.ATTACK and not self.is_tapped:
             owner = next(p for p in state.players if self in p.board)
-            print(f"\n[Réaction] {owner.name} : voulez-vous activer le Temple pour esquiver ?")
-            print("1 - Oui")
-            print("2 - Non")
-            choice = 0
-            while choice not in [1, 2]:
-                try:
-                    choice = int(input("Votre choix : "))
-                except ValueError:
-                    pass
-            if choice == 1:
+
+            if owner.choose_yes_no(f"\n[Réaction] {owner.name} : engager {self.name} ?"):
                 self.tap()
                 kwargs.get('context')['cancelled'] = True
-                print(f"[Réaction] Temple : attaque annulée !")
+                print(f"[Réaction] {self.name} : attaque annulée !")
     
     def score(self, state, player):
         return 2
@@ -395,7 +359,7 @@ class Temple(Monument):
 
 class ImpiousCathedral(Monument):
     def __init__(self):
-        super().__init__("Impious Cathedral")
+        super().__init__("Cathédrale Impie")
     
     def on_event(self, event, state, source_player, **kwargs):
         if event == GameEvent.VICTORY_CHECK and not self.is_tapped:
@@ -407,16 +371,8 @@ class ImpiousCathedral(Monument):
                       and not c.is_tapped]
             if not demons:
                 return
-            print(f"\n[Réaction] {owner.name} : voulez-vous activer la Cathédrale Impie ? (s'engage + engage un démon pour +1 point)")
-            print("1 - Oui")
-            print("2 - Non")
-            choice = 0
-            while choice not in [1, 2]:
-                try:
-                    choice = int(input("Votre choix : "))
-                except ValueError:
-                    pass
-            if choice == 1:
+            
+            if owner.choose_yes_no(f"\n[Réaction] {owner.name} : activer {self.name} ? (s'engage + engage un démon, +1 point)"):
                 print("Choisissez un démon à engager :")
                 demon = owner.choose_card(demons)
                 self.tap()
@@ -430,7 +386,7 @@ class ImpiousCathedral(Monument):
 
 class SacredStatue(Monument):
     def __init__(self):
-        super().__init__("Statue Sacrée")
+        super().__init__("Statuette Sacrée")
     
     def on_event(self, event, state, source_player, **kwargs):
         if event == GameEvent.VICTORY_CHECK and not self.is_tapped:
@@ -440,23 +396,11 @@ class SacredStatue(Monument):
             if not owner.resources.has(Resource.GOLD, 3):
                 return
             
-            print(f"\n[Réaction] {owner.name} : voulez-vous activer la Statue Sacrée ? (3 GOLD → +3 points, s'engage)")
-            print("1 - Oui")
-            print("2 - Non")
-            choice = 0
-            while choice not in [1, 2]:
-                try:
-                    choice = int(input("Votre choix : "))
-                except ValueError:
-                    pass
-            if choice == 1:
+            if owner.choose_yes_no(f"\n[Réaction] {owner.name} : activer {self.name} ? (3 GOLD → +3 points, s'engage)"):
                 owner.resources.remove(Resource.GOLD, 3)
-                print("owner.points: (avant)", owner.points)
                 owner.bonus_points += 3
-                print("OUUUUAIII ca passe par le on_event de sacred statue")
-                print("owner.points: (apres)", owner.points)
                 self.tap()
-                print(f"[Réaction] Statue Sacrée : -3 GOLD, +3 points !")
+                print(f"[Réaction] {self.name} : -3 GOLD, +3 points !")
     
     def score(self, state, player):
         return 1

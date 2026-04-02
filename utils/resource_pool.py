@@ -16,7 +16,7 @@ class ResourcePool:
     
     def get_amount(self, resource):
         """Get le nombre d'une certaine ressource
-        Idem: self.resource[resource]
+        Idem: self.resources[resource]
 
         Args:
             resource (Resource): la ressource

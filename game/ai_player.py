@@ -17,3 +17,6 @@ class AIPlayer(Player):
 
     def choose_yes_no(self, question):
         return random.choice([True, False])
+    
+    def choose_number(self, min_val, max_val):
+        return random.randint(min_val, max_val)
