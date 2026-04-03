@@ -30,7 +30,7 @@ def test_pioche_une_carte(setup):
     assert card in player.hand
     assert len(player.deck) == 0
     assert augur not in player.board
-    assert augur in state.engine.available_scrolls
+    assert augur in state.scrolls
 
 
 def test_pioche_vide(setup):

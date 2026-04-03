@@ -56,4 +56,4 @@ def test_retourne_dans_pool(setup):
     with patch('builtins.input', return_value='1'):
         ability = vitality.get_abilities()[0]
         ability.execute(state, player)
-    assert vitality in state.engine.available_scrolls
+    assert vitality in state.scrolls

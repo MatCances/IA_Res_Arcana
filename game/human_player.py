@@ -2,7 +2,7 @@ from game.player import Player
 
 class HumanPlayer(Player):
 
-    def choose_card(self, choices):
+    def choose_card(self, choices, state=None):
         for i, card in enumerate(choices):
             print(f"{i+1} - {card.name}")
         choice = 0
@@ -11,9 +11,12 @@ class HumanPlayer(Player):
                 choice = int(input("Numéro de la carte : "))
             except ValueError:
                 print("  ! Merci de taper un chiffre valide !")
+        chosen = choices[choice - 1]
+        if state:
+            state.logger.decision(f"{self.name}.choose_card([{', '.join(c.name for c in choices)}]) → {chosen.name}")
         return choices[choice - 1]
 
-    def choose_resource(self, choices):
+    def choose_resource(self, choices, state=None):
         for i, res in enumerate(choices):
             print(f"{i+1} - {res.value}")
         choice = 0
@@ -24,7 +27,7 @@ class HumanPlayer(Player):
                 print("  ! Merci de taper un chiffre valide !")
         return choices[choice - 1]
 
-    def choose_action(self, actions):
+    def choose_action(self, actions, state=None):
         print("\n+--------------------------+")
         print("| Actions possibles :")
         for i, action in enumerate(actions):
@@ -37,7 +40,7 @@ class HumanPlayer(Player):
                 print("  ! Merci de taper un chiffre valide !")
         return actions[choice - 1]
     
-    def choose_option(self, options):
+    def choose_option(self, options, state=None):
         for i, option in enumerate(options):
             print(f"{i+1} - {option}")
         choice = 0
@@ -48,7 +51,7 @@ class HumanPlayer(Player):
                 print("  ! Merci de taper un chiffre valide !")
         return choice - 1
     
-    def choose_yes_no(self, question):
+    def choose_yes_no(self, question, state=None):
         """Renvoie True si le choix est 1 - Oui, False sinon.
         La fonction commence comme ca:
 
@@ -73,7 +76,7 @@ class HumanPlayer(Player):
                 pass
         return choice == 1
     
-    def choose_number(self, min_val, max_val):
+    def choose_number(self, min_val, max_val, state=None):
         """Choisi un nombre entre min_val et max_val
 
         Args:

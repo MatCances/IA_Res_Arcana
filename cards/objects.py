@@ -187,7 +187,7 @@ class Inscription(Obj):
     
     def get_abilities(self):
         def effect(state, player):
-            if not state.engine.available_scrolls:
+            if not state.scrolls:
                 print("Aucun parchemin disponible.")
                 return
             
@@ -196,9 +196,9 @@ class Inscription(Obj):
             player.resources.remove(resource, 1)
 
             print("Choisissez un parchemin :")
-            scroll = player.choose_card(state.engine.available_scrolls)
+            scroll = player.choose_card(state.scrolls)
             
-            state.engine.available_scrolls.remove(scroll)
+            state.scrolls.remove(scroll)
             player.board.append(scroll)
             print(f"{player.name} prend {scroll.name}")
             self.tap()

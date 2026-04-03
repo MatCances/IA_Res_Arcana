@@ -377,8 +377,8 @@ class ImpiousCathedral(Monument):
                 demon = owner.choose_card(demons)
                 self.tap()
                 demon.tap()
-                owner.points += 1
-                print(f"[Réaction] Cathédrale Impie : +1 point !")
+                owner.bonus_points += 1
+                print(f"[Réaction] {self.name} : +1 point !")
     
     def score(self, state, player):
         return 2
@@ -386,7 +386,7 @@ class ImpiousCathedral(Monument):
 
 class SacredStatue(Monument):
     def __init__(self):
-        super().__init__("Statuette Sacrée")
+        super().__init__("Statue Sacrée")
     
     def on_event(self, event, state, source_player, **kwargs):
         if event == GameEvent.VICTORY_CHECK and not self.is_tapped:

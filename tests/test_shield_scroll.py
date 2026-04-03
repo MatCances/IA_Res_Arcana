@@ -29,7 +29,7 @@ def test_annule_attaque(setup):
         shield.on_event(GameEvent.ATTACK, state, player1, context=context)
     assert context["cancelled"] == True
     assert shield not in player1.board
-    assert shield in state.engine.available_scrolls
+    assert shield in state.scrolls
 
 
 def test_refuse_activation(setup):

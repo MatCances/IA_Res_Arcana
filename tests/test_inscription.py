@@ -17,6 +17,7 @@ def setup():
     player.resources.add(Resource.ELAN, 1)
     engine = MagicMock()
     engine.available_scrolls = [scroll]
+    state.scrolls = [scroll]
     state.engine = engine
     return state, player, obj, scroll
 
@@ -28,7 +29,7 @@ def test_prend_parchemin(setup):
         ability = obj.get_abilities()[0]
         ability.execute(state, player)
     assert scroll in player.board
-    assert scroll not in state.engine.available_scrolls
+    assert scroll not in state.scrolls
     assert player.resources.resources[Resource.ELAN] == 0
     assert obj.is_tapped == True
 
@@ -36,7 +37,7 @@ def test_prend_parchemin(setup):
 def test_aucun_parchemin_disponible(setup):
     """Ne fait rien si aucun parchemin disponible"""
     state, player, obj, scroll = setup
-    state.engine.available_scrolls = []
+    state.scrolls = []
     with patch('builtins.input', return_value='1') as mock_input:
         ability = obj.get_abilities()[0]
         ability.execute(state, player)

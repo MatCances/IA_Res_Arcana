@@ -108,8 +108,6 @@ class Prism(Artifact):
             player.resources.remove(resource_out, x)
             player.resources.add(resource_in, x)
             print(f"{player.name} échange {x} {resource_out.value} contre {x} {resource_in.value}")
-            player.board.remove(self)
-            state.engine.available_scrolls.append(self)
             self.tap()
         
         abilities = [Ability("1 ressource contre 2 ressources",

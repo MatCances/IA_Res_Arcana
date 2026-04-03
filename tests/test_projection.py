@@ -27,7 +27,7 @@ def test_3x_ressources_pour_x_gold(setup):
     assert player.resources.resources[Resource.ELAN] == 0
     assert player.resources.resources[Resource.GOLD] == 2
     assert projection not in player.board
-    assert projection in state.engine.available_scrolls
+    assert projection in state.scrolls
 
 
 def test_pas_assez_ressources(setup):
@@ -47,4 +47,4 @@ def test_retourne_dans_pool(setup):
     with patch('builtins.input', side_effect=['1', '1']):
         ability = projection.get_abilities()[0]
         ability.execute(state, player)
-    assert projection in state.engine.available_scrolls
+    assert projection in state.scrolls

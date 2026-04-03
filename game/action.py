@@ -59,10 +59,39 @@ def action_discard(state, player, card):
 
     return Action(f"Défausser {card.name}", execute)
 
-
-def action_buy_monument(state, player, monument, dispatch=None):
-    """Action : acheter un monument en payant son coût."""
+def action_buy_monument(state, player, dispatch=None):
+    """Action : acheter un monument. Soit parmis les 2 disponible, soit tirer dans la pioche"""
     def execute(state, player):
+        # construire les options disponibles
+        options = []
+        for monument in state.monuments_visible:
+            options.append(monument)
+        if state.monuments_deck:
+            options.append(None)  # None représente "tirer dans la pioche"
+        
+        # construire les labels pour choose_option
+        labels = [m.name for m in state.monuments_visible]
+        if state.monuments_deck:
+            labels.append("Tirer dans la pioche (inconnu)")
+        
+        choice = player.choose_option(labels, state)
+        
+        if options[choice] is None:
+            # tirer dans la pioche
+            monument = state.monuments_deck.pop(0)
+            print(f"{player.name} tire {monument.name} de la pioche")
+            state.logger.action(f"{player.name} tire {monument.name} de la pioche")
+        else:
+            # prendre un monument visible
+            monument = options[choice]
+            state.monuments_visible.remove(monument)
+            # révéler le prochain monument
+            if state.monuments_deck:
+                next_monument = state.monuments_deck.pop(0)
+                state.monuments_visible.append(next_monument)
+                state.logger.action(f"{player.name} achète {monument.name}")
+                state.logger.action(f"Monument révélé : {next_monument.name}")
+        
         # payer le coût
         for resource, amount in monument.cost.items():
             player.resources.remove(resource, amount)
@@ -70,47 +99,14 @@ def action_buy_monument(state, player, monument, dispatch=None):
         # effet one-shot
         monument.on_buy(state, player)
         
-        # ajouter le monument au plateau du joueur
+        # ajouter au plateau
         player.board.append(monument)
         
-        # retirer le monument des monuments disponibles
-        state.monuments_visible.remove(monument)
-
-        # Réveler le prochain monument
-        state._reveal_next_monument()
-        
-        print(f"{player.name} achète {monument.name}")
 
         if dispatch:
             dispatch(GameEvent.BUY_MONUMENT, player, monument=monument)
 
-    return Action(f"Acheter {monument.name}", execute)
-
-def action_buy_monument_from_deck(state, player, dispatch=None):
-    """Action : tirer et acheter le premier monument de la pioche."""
-    def execute(state, player):
-        if not state.monuments_deck:
-            print("Aucun monument dans la pioche !")
-            return
-
-        # Tirer le premier monument de la pioche
-        monument = state.monuments_deck.pop(0)
-        print(f"{player.name} tire et achète {monument.name} de la pioche")
-        
-        # payer le coût
-        for resource, amount in monument.cost.items():
-            player.resources.remove(resource, amount)
-        
-        # effet one-shot
-        monument.on_buy(state, player)
-        
-        # ajouter le monument au plateau du joueur
-        player.board.append(monument)
-
-        if dispatch:
-            dispatch(GameEvent.BUY_MONUMENT, player, monument=monument)
-
-    return Action(f"Tirer un monument de la pioche", execute)
+    return Action("Acheter un monument", execute)
 
 def action_buy_place_of_power(state, player, place, dispatch=None):
     """Action : acheter un lieu de puissance en payant son coût."""

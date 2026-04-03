@@ -1,6 +1,5 @@
 from utils.resource_pool import ResourcePool
 from utils.constant import Resource
-# from cli.input_handler import choose_resource
 from itertools import combinations_with_replacement
 
 class Player:
@@ -120,25 +119,26 @@ class Player:
     # --- Méthodes de décision ---
     # Ces méthodes sont à implémenter dans HumanPlayer et AIPlayer.
     # Elles représentent tous les moments où on demande quelque chose à un joueur.
+    # Le parametre state sert uniquement pour le logger dans ces fonction
  
-    def choose_card(self, choices):
+    def choose_card(self, choices, state=None):
         """Choisir une carte parmi une liste."""
         raise NotImplementedError
  
-    def choose_resource(self, choices):
+    def choose_resource(self, choices, state=None):
         """Choisir une ressource parmi une liste."""
         raise NotImplementedError
  
-    def choose_action(self, actions):
+    def choose_action(self, actions, state=None):
         """Choisir une action parmi la liste des actions disponibles."""
         raise NotImplementedError
 
-    def choose_option(self, options):
+    def choose_option(self, options, state=None):
         """Choisir parmi une liste d'options textuelles.
         """
         raise NotImplementedError
     
-    def choose_yes_no(self, question):
+    def choose_yes_no(self, question, state=None):
         """Choisir oui ou non.
         
         Returns:
@@ -146,5 +146,5 @@ class Player:
         """
         raise NotImplementedError
     
-    def choose_number(self, min_val, max_val):
+    def choose_number(self, min_val, max_val, state=None):
         raise NotImplementedError

@@ -31,7 +31,7 @@ def test_detruit_artefact_et_recoit_ressources(setup):
     assert artifact in player.discard
     assert player.resources.resources[Resource.ELAN] == 1
     assert destruction not in player.board
-    assert destruction in state.engine.available_scrolls
+    assert destruction in state.scrolls
 
 
 def test_artefact_cout_zero(setup):
@@ -62,4 +62,4 @@ def test_retourne_dans_pool(setup):
     with patch('builtins.input', side_effect=['1', '1']):
         ability = destruction.get_abilities()[0]
         ability.execute(state, player)
-    assert destruction in state.engine.available_scrolls
+    assert destruction in state.scrolls

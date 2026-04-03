@@ -24,7 +24,7 @@ class Vitality(Scroll):
             print(f"{card.name} est désengagée.")
             player.resources.remove(Resource.ELAN, 2)
             player.board.remove(self)
-            state.engine.available_scrolls.append(self)
+            state.scrolls.append(self)
         
         return [Ability("Désengager une carte du plateau", cost={Resource.ELAN: 2}, effect=effect)]
     
@@ -39,7 +39,7 @@ class Shield(Scroll):
             if owner.choose_yes_no(f"\n[Réaction] {owner.name} : utiliser Parchemin {self.name} ?"):
                 kwargs.get('context')['cancelled'] = True
                 owner.board.remove(self)
-                state.engine.available_scrolls.append(self)
+                state.scrolls.append(self)
                 print(f"[Réaction] Bouclier : attaque annulée !")
 
 
@@ -56,7 +56,7 @@ class Disjunction(Scroll):
             player.resources.add(Resource.CALM, 1)
             print(f"{player.name} obtient 1 ELAN, 1 DEATH, 1 LIFE, 1 CALM")
             player.board.remove(self)
-            state.engine.available_scrolls.append(self)
+            state.scrolls.append(self)
         
         return [Ability("1 GOLD pour 1 ELAN + 1 DEATH + 1 LIFE + 1 CALM", cost={Resource.GOLD: 1}, effect=effect)]
 
@@ -82,7 +82,7 @@ class Projection(Scroll):
             player.resources.add(Resource.GOLD, x)
             print(f"{player.name} paie {3*x} {resource.value} et reçoit {x} GOLD")
             player.board.remove(self)
-            state.engine.available_scrolls.append(self)
+            state.scrolls.append(self)
         
         return [Ability("3X ressources d'un même type pour X GOLD", cost={}, effect=effect)]
 
@@ -102,7 +102,7 @@ class Augur(Scroll):
             player.hand.append(card)
             print(f"{player.name} pioche {card.name}")
             player.board.remove(self)
-            state.engine.available_scrolls.append(self)
+            state.scrolls.append(self)
         
         return [Ability("1 CALM pour piocher une carte", cost={Resource.CALM: 1}, effect=effect)]
 
@@ -139,7 +139,7 @@ class Destruction(Scroll):
                 player.resources.add(resource, 1)
             
             player.board.remove(self)
-            state.engine.available_scrolls.append(self)
+            state.scrolls.append(self)
         
         return [Ability("Détruire un artefact pour gagner son coût en ressources", cost={}, effect=effect)]
 
@@ -161,7 +161,7 @@ class Recovery(Scroll):
             player.hand.append(card)
             print(f"{player.name} récupère {card.name}")
             player.board.remove(self)
-            state.engine.available_scrolls.append(self)
+            state.scrolls.append(self)
         
         return [Ability("1 DEATH pour récupérer une carte de la défausse", cost={Resource.DEATH: 1}, effect=effect)]
 
@@ -188,7 +188,7 @@ class Transformation(Scroll):
             player.resources.add(resource_in, x)
             print(f"{player.name} échange {x} {resource_out.value} contre {x} {resource_in.value}")
             player.board.remove(self)
-            state.engine.available_scrolls.append(self)
+            state.scrolls.append(self)
         
         return [Ability("X ressources d'un type contre X ressources d'un autre type",
                         cost={Resource.ANY: 1},

@@ -1,7 +1,7 @@
 import random as rd
 from cards.artifacts import Moloss
+from cards.monuments import Monument
 from game.game_state import GameState
-# from cli.input_handler import available_actions #, choose_action, choose_resource
 from cli.display import display_state
 from utils.constant import Resource, GameEvent
 from game.action import (action_pass,
@@ -9,8 +9,8 @@ from game.action import (action_pass,
                          action_play_artifact,
                          action_use_ability,
                          action_buy_monument,
-                         action_buy_monument_from_deck,
                          action_buy_place_of_power)
+from utils.logger import Logger
 
 
 WINNING_SCORE = 13
@@ -23,7 +23,9 @@ class Engine:
                  monuments,
                  places_of_power,
                  objects,
-                 scrolls):
+                 scrolls,
+                 logger=None):
+        self.logger = logger or Logger(level=0)  # silencieux par défaut
         self.state = GameState(players)
         self.state.engine = self
         self.available_mages = mages
@@ -35,6 +37,12 @@ class Engine:
         self.game_over = False
         self.winner = None
         self.first_player_tile = None
+
+        # Dans l'état du jeu, tous les objet et parchemin sont pris
+        # Contrairement aux monuments/lieu de puissance (voir setup_board)
+        self.state.objects = objects
+        self.state.scrolls = scrolls
+        self.state.logger = self.logger
     
     def setup(self):
         self._give_starting_resources()
@@ -139,8 +147,8 @@ class Engine:
             player = self.state.players[idx]
 
             print(f"\n{player.name}, choisissez un objet :")
-            chosen = player.choose_card(self.available_objects)
-            self.available_objects.remove(chosen)
+            chosen = player.choose_card(self.state.objects)
+            self.state.objects.remove(chosen)
             player.object = chosen
             player.board.append(chosen)
 
@@ -275,14 +283,10 @@ class Engine:
         for card in player.hand:
             actions.append(action_discard(self.state, player, card))
         
-        # acheter un monument visible
-        for monument in self.state.monuments_visible:
-            if player.can_buy(monument):
-                actions.append(action_buy_monument(self.state, player, monument, dispatch=self.dispatch_event))
-
-        # Acheter le monument sur la pioche des monuments
-        if self.state.monuments_deck:
-            actions.append(action_buy_monument_from_deck(self.state, player, dispatch=self.dispatch_event))
+        # Achter un monument visible ou en tirant dans la pioche
+        if self.state.monuments_visible or self.state.monuments_deck:
+            if player.can_buy(Monument("Any")):
+                actions.append(action_buy_monument(self.state, player, dispatch=self.dispatch_event))
         
         # toujours disponible
         actions.append(action_pass(self.state, player))
@@ -342,18 +346,18 @@ class Engine:
     def _exchange_object(self, player):
         """Le joueur échange son objet avec un disponible sur le plateau."""
 
-        if not self.available_objects:
+        if not self.state.objects:
             print("Aucun objet disponible.")
             return
 
         print(f"\n{player.name}, échangez votre objet ({player.object.name}) :")
         old_object = player.object
-        chosen = player.choose_card(self.available_objects)
-        self.available_objects.remove(chosen)
+        chosen = player.choose_card(self.state.objects)
+        self.state.objects.remove(chosen)
 
         player.object = chosen
         player.board.append(player.object)
-        self.available_objects.append(old_object)
+        self.state.objects.append(old_object)
         print(f"{player.name} échange {old_object.name} contre {player.object.name}")
 
     def _draw_card(self, player):

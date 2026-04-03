@@ -31,7 +31,7 @@ def test_recupere_carte_defausse(setup):
     assert card in player.hand
     assert card not in player.discard
     assert recovery not in player.board
-    assert recovery in state.engine.available_scrolls
+    assert recovery in state.scrolls
 
 
 def test_defausse_vide(setup):
@@ -58,4 +58,4 @@ def test_retourne_dans_pool(setup):
     with patch('builtins.input', return_value='1'):
         ability = recovery.get_abilities()[0]
         ability.execute(state, player)
-    assert recovery in state.engine.available_scrolls
+    assert recovery in state.scrolls

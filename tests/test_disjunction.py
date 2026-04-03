@@ -29,7 +29,7 @@ def test_echange_gold_contre_ressources(setup):
     assert player.resources.resources[Resource.LIFE] == 1
     assert player.resources.resources[Resource.CALM] == 1
     assert disjunction not in player.board
-    assert disjunction in state.engine.available_scrolls
+    assert disjunction in state.scrolls
 
 
 def test_pas_assez_gold(setup):
@@ -45,4 +45,4 @@ def test_retourne_dans_pool(setup):
     state, player, disjunction = setup
     ability = disjunction.get_abilities()[0]
     ability.execute(state, player)
-    assert disjunction in state.engine.available_scrolls
+    assert disjunction in state.scrolls
