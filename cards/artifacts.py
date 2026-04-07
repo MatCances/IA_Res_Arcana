@@ -666,16 +666,14 @@ class Moloss(Artifact):
                 self.tap()
 
     def get_abilities(self):
-        # Cet effet doit se faire justement si la carte est engagé.
-        # Le problème c'est que get_abilities n'est appelé que si la carte n'est pas engagé
-        # j'ai géré ca dans le engine, exception pour le Molosse
         def effect(state, player):
             player.resources.remove(Resource.ELAN, 1)
             self.untap()
 
         abilities = [Ability("1 ELAN pour désengager le Molosse",
                              cost={Resource.ELAN: 1},
-                             effect=effect)]
+                             effect=effect,
+                             condition=lambda _s, _p, card: card.is_tapped)]
         return abilities
 
 

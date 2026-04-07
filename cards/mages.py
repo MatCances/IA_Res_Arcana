@@ -229,8 +229,14 @@ class Tamer(Mage):
                 resource = player.choose_resource(choices)
                 player.resources.add(resource, 1)
 
+        def has_untapped_creature(_s, player, card):
+            return not card.is_tapped and any(
+                c for c in player.board if not c.is_tapped and c.card_type is CardType.CREATURE
+            )
+
         abilities = [Ability("1 LIFE pour mettre 3 LIFE sur Dresseuse", cost={Resource.LIFE: 1}, effect=effect1),
-                     Ability("Engage Dresseuse et une créature pour obtenir 2 ressource", cost={}, effect=effect2)]
+                     Ability("Engage Dresseuse et une créature pour obtenir 2 ressource", cost={}, effect=effect2,
+                             condition=has_untapped_creature)]
         return abilities
 
 

@@ -120,3 +120,41 @@ def test_effet2_gratuit(setup):
     """Le second pouvoir ne coûte rien."""
     state, player, tamer = setup
     assert player.can_afford(tamer.get_abilities()[1]) is True
+
+
+def test_pouvoir_absent_si_aucune_creature(setup):
+    """Sans créature sur le plateau, le pouvoir n'apparaît pas dans les actions dispo."""
+    engine = Engine(players=[setup[1]], mages=[], artifacts=[], monuments=[],
+                    places_of_power=[], objects=[], scrolls=[])
+    engine.state = setup[0]
+    engine.state.engine = engine
+    actions = engine.available_actions(setup[1])
+    noms = [a.name for a in actions]
+    assert not any("Engage Dresseuse" in n for n in noms)
+
+
+def test_pouvoir_absent_si_dresseuse_engagee(setup):
+    """Si la Dresseuse est engagée, le pouvoir n'est pas proposé même avec une créature dispo."""
+    engine = Engine(players=[setup[1]], mages=[], artifacts=[], monuments=[],
+                    places_of_power=[], objects=[], scrolls=[])
+    engine.state = setup[0]
+    engine.state.engine = engine
+    creature = make_creature()
+    setup[1].board.append(creature)
+    setup[2].tap()  # Dresseuse engagée
+    actions = engine.available_actions(setup[1])
+    noms = [a.name for a in actions]
+    assert not any("Engage Dresseuse" in n for n in noms)
+
+
+def test_pouvoir_present_si_creature_disponible(setup):
+    """Avec une créature non engagée, le pouvoir apparaît dans les actions dispo."""
+    engine = Engine(players=[setup[1]], mages=[], artifacts=[], monuments=[],
+                    places_of_power=[], objects=[], scrolls=[])
+    engine.state = setup[0]
+    engine.state.engine = engine
+    creature = make_creature()
+    setup[1].board.append(creature)
+    actions = engine.available_actions(setup[1])
+    noms = [a.name for a in actions]
+    assert any("Engage Dresseuse" in n for n in noms)

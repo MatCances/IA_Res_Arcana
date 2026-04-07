@@ -1,5 +1,4 @@
 import random as rd
-from cards.artifacts import Moloss
 from cards.monuments import Monument
 from game.game_state import GameState
 from cli.display import display_state
@@ -256,18 +255,11 @@ class Engine:
         """
         actions = []
 
-        # utiliser le pouvoir d'une carte non engagée
+        # utiliser le pouvoir d'une carte
         for card in player.board:
-            if not card.is_tapped:
-                for ability in card.get_abilities():
-                    if player.can_afford(ability):
-                        actions.append(action_use_ability(self.state, player, card, ability))
-
-            # Exception pour le Molosse qui à une ability justement quand elle est engagé
-            if isinstance(card, Moloss) and card.is_tapped:
-                for ability in card.get_abilities():
-                    if player.can_afford(ability):
-                        actions.append(action_use_ability(self.state, player, card, ability))
+            for ability in card.get_abilities():
+                if player.can_afford(ability) and ability.condition(self.state, player, card):
+                    actions.append(action_use_ability(self.state, player, card, ability))
 
         # jouer un artefact depuis la main
         for card in player.hand:
