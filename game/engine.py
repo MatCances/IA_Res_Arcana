@@ -57,7 +57,7 @@ class Engine:
     def _give_starting_resources(self):
         for player in self.state.players:
             for resource in Resource.real():
-                player.resources.add(resource, 8)
+                player.resources.add(resource, 1)
     
     def _setup_board(self):
         self.state.places_of_power = rd.sample(self.available_places_of_power, 4)

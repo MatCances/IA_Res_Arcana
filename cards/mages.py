@@ -222,6 +222,13 @@ class Tamer(Mage):
             card.tap()
             self.tap()
 
+            excluded = {Resource.GOLD, Resource.PEARL}
+            choices = [r for r in Resource.real() if r not in excluded]
+            print("Choisissez 2 ressources à recevoir :")
+            for _ in range(2):
+                resource = player.choose_resource(choices)
+                player.resources.add(resource, 1)
+
         abilities = [Ability("1 LIFE pour mettre 3 LIFE sur Dresseuse", cost={Resource.LIFE: 1}, effect=effect1),
                      Ability("Engage Dresseuse et une créature pour obtenir 2 ressource", cost={}, effect=effect2)]
         return abilities
@@ -347,7 +354,7 @@ class Witch(Mage):
         super().__init__(name="Sorcière")
     
     def collect_base(self, state, player):
-        choices = {Resource.LIFE, Resource.DEATH}
+        choices = [Resource.LIFE, Resource.DEATH]
         print("Sorcière : choisissez une ressource à collecter :")
         resource = player.choose_resource(choices)
         player.resources.add(resource, 1)
@@ -455,8 +462,10 @@ class Artificer(Mage):
         super().__init__(name="Artificier")
         self.reduction_effect = {"value": 1,
                                  "excluded": [Resource.GOLD, Resource.PEARL],
-                                 "card_type": [None, CardType.CREATURE, CardType.DEMON, CardType.DRAGON]}
-
+                                 "card_type": [CardType.NONE,
+                                               CardType.CREATURE,
+                                               CardType.DEMON,
+                                               CardType.DRAGON]}
 
 
 class Draconist(Mage):
