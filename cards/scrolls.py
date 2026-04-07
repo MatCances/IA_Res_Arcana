@@ -26,7 +26,8 @@ class Vitality(Scroll):
             player.board.remove(self)
             state.scrolls.append(self)
         
-        return [Ability("Désengager une carte du plateau", cost={Resource.ELAN: 2}, effect=effect)]
+        return [Ability("Désengager une carte du plateau", cost={Resource.ELAN: 2}, effect=effect,
+                        condition=lambda _s, player, _card: any(c for c in player.board if c.is_tapped))]
     
 
 class Shield(Scroll):
@@ -104,7 +105,8 @@ class Augur(Scroll):
             player.board.remove(self)
             state.scrolls.append(self)
         
-        return [Ability("1 CALM pour piocher une carte", cost={Resource.CALM: 1}, effect=effect)]
+        return [Ability("1 CALM pour piocher une carte", cost={Resource.CALM: 1}, effect=effect,
+                        condition=lambda _s, player, _card: bool(player.deck))]
 
 
 class Destruction(Scroll):
@@ -112,8 +114,9 @@ class Destruction(Scroll):
         super().__init__("Destruction", cost={})
     
     def get_abilities(self):
+        from cards.artifacts import Artifact
+
         def effect(state, player):
-            from cards.artifacts import Artifact
             artifacts = [card for card in player.board if isinstance(card, Artifact)]
             if not artifacts:
                 print("Aucun artefact sur votre plateau.")
@@ -141,7 +144,10 @@ class Destruction(Scroll):
             player.board.remove(self)
             state.scrolls.append(self)
         
-        return [Ability("Détruire un artefact pour gagner son coût en ressources", cost={}, effect=effect)]
+        return [Ability("Détruire un artefact pour gagner son coût en ressources", cost={}, effect=effect,
+                        condition=lambda _s, player, _card: any(
+                            isinstance(c, Artifact) for c in player.board
+                        ))]
 
 
 class Recovery(Scroll):
@@ -163,7 +169,8 @@ class Recovery(Scroll):
             player.board.remove(self)
             state.scrolls.append(self)
         
-        return [Ability("1 DEATH pour récupérer une carte de la défausse", cost={Resource.DEATH: 1}, effect=effect)]
+        return [Ability("1 DEATH pour récupérer une carte de la défausse", cost={Resource.DEATH: 1}, effect=effect,
+                        condition=lambda _s, player, _card: bool(player.discard))]
 
 
 class Transformation(Scroll):

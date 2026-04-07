@@ -55,9 +55,17 @@ class DragonsLair(PlaceOfPower):
             self.tap()
             print(f"2 GOLD posés sur {self.name}")
         
+        def has_untapped_dragon(_s, player, card):
+            return not card.is_tapped and any(
+                c for c in player.board if not c.is_tapped and c.card_type in [CardType.DRAGON, CardType.ILLUSIONIST]
+            )
+        
         return [
             Ability("2 GOLD", cost={}, effect=effect1),
-            Ability("Engager un dragon pour poser 2 GOLD sur la carte", cost={}, effect=effect2)
+            Ability("Engager un dragon pour poser 2 GOLD sur la carte",
+                    cost={},
+                    effect=effect2,
+                    condition=has_untapped_dragon)
         ]
     
     def score(self, state, player):
@@ -158,7 +166,10 @@ class WizardBestiary(PlaceOfPower):
 
         return [
             Ability("Lancer un contrôle de victoire immédiat", cost={}, effect=effect1),
-            Ability("4 ressources pour récupérer un dragon d'une défausse", cost={Resource.ANY: 4}, effect=effect2)
+            Ability("4 ressources pour récupérer un dragon d'une défausse", cost={Resource.ANY: 4}, effect=effect2,
+                    condition=lambda state, _player, card: not card.is_tapped and any(
+                        c for p in state.players for c in p.discard if c.card_type == CardType.DRAGON
+                    ))
             ]
 
 

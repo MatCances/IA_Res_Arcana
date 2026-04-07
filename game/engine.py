@@ -220,6 +220,7 @@ class Engine:
         print("\n+===== PHASE DE COLLECTE =====")
         for player in self.state.players:
             print(f"\n--- {player.name} ---")
+            print(f" Resources: {player.resources}")
 
             # collecte des ressources posées sur les cartes (tout ou rien)
             for card in player.board:
@@ -303,6 +304,7 @@ class Engine:
 
                 display_state(self.state)
                 print(f"\n --> Tour de {player.name}")
+                print(f" Resources: {player.resources}")
 
                 actions = self.available_actions(player)
                 action = player.choose_action(actions)

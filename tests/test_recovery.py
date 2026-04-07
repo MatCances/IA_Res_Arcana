@@ -59,3 +59,18 @@ def test_retourne_dans_pool(setup):
         ability = recovery.get_abilities()[0]
         ability.execute(state, player)
     assert recovery in state.scrolls
+
+
+def test_condition_absente_si_defausse_vide(setup):
+    """La condition est False si la défausse est vide."""
+    state, player, recovery, card = setup
+    player.discard = []
+    ability = recovery.get_abilities()[0]
+    assert not ability.condition(state, player, recovery)
+
+
+def test_condition_presente_si_defausse_non_vide(setup):
+    """La condition est True si la défausse contient des cartes."""
+    state, player, recovery, card = setup
+    ability = recovery.get_abilities()[0]
+    assert ability.condition(state, player, recovery)

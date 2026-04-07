@@ -14,16 +14,19 @@ class Alchemist(Mage):
 
     def get_abilities(self):
         def effect1(state, player):
+            excluded = [Resource.GOLD, Resource.PEARL]
             print("Obtenez 1 ressource :")
-            resource = player.choose_resource([r for r in Resource.real() if r != Resource.PEARL])
+            resource = player.choose_resource([r for r in Resource.real() if r not in excluded])
             player.resources.add(resource, 1)
             self.tap()
 
         def effect2(state, player):
             print("Choisissez 4 ressources à payer :")
+            excluded = [Resource.GOLD, Resource.PEARL]
+            choices = [r for r in Resource.real() if r not in excluded]
             for _ in range(4):
                 
-                resource = player.choose_resource(list(Resource.real()))
+                resource = player.choose_resource(choices)
                 player.resources.remove(resource, 1)
             player.resources.add(Resource.GOLD, 2)
             self.tap()
@@ -195,8 +198,16 @@ class Demonist(Mage):
             card.untap()
             self.tap()
         
-        return [Ability("1 LIFE pour récupérer une carte de la défausse", cost={Resource.LIFE: 1}, effect=effect1),
-                Ability("Désengager un démon", cost={}, effect=effect2)
+        return [Ability("1 LIFE pour récupérer une carte de la défausse",
+                        cost={Resource.LIFE: 1},
+                        effect=effect1,
+                        condition=lambda _s, player, card: not card.is_tapped and bool(player.discard)),
+                Ability("Désengager un démon",
+                        cost={},
+                        effect=effect2,
+                        condition=lambda _s, player, card: not card.is_tapped and any(
+                            c for c in player.board if c.is_tapped and c.card_type is CardType.DEMON
+                        ))
                 ]
 
 
@@ -211,7 +222,9 @@ class Tamer(Mage):
             self.tap()
         
         def effect2(state, player):
-            untapped = [card for card in player.board if not card.is_tapped and card.card_type is CardType.CREATURE]
+            untapped = [card for card in player.board
+                        if not card.is_tapped
+                        and card.card_type in [CardType.CREATURE, CardType.ILLUSIONIST]]
             if not untapped:
                 print("Aucune créature à engager")
                 self.tap()
@@ -231,11 +244,15 @@ class Tamer(Mage):
 
         def has_untapped_creature(_s, player, card):
             return not card.is_tapped and any(
-                c for c in player.board if not c.is_tapped and c.card_type is CardType.CREATURE
+                c for c in player.board if not c.is_tapped and c.card_type in [CardType.CREATURE, CardType.ILLUSIONIST]
             )
 
-        abilities = [Ability("1 LIFE pour mettre 3 LIFE sur Dresseuse", cost={Resource.LIFE: 1}, effect=effect1),
-                     Ability("Engage Dresseuse et une créature pour obtenir 2 ressource", cost={}, effect=effect2,
+        abilities = [Ability("1 LIFE pour mettre 3 LIFE sur Dresseuse",
+                             cost={Resource.LIFE: 1},
+                             effect=effect1),
+                     Ability("Engage Dresseuse et une créature pour obtenir 2 ressource",
+                             cost={},
+                             effect=effect2,
                              condition=has_untapped_creature)]
         return abilities
 
@@ -269,8 +286,12 @@ class Bard(Mage):
             player.resources.add(Resource.GOLD, 2)
             self.tap()
 
+        ok_types = {CardType.DEMON, CardType.DRAGON, CardType.CREATURE}
         abilities = [Ability("Obtiens une ressource au choix", cost={}, effect=effect1),
-                     Ability("Défausse créature, dragon ou demon: +2 GOLD", cost={}, effect=effect2)]
+                     Ability("Défausse créature, dragon ou demon: +2 GOLD", cost={}, effect=effect2,
+                             condition=lambda _s, player, card: not card.is_tapped and any(
+                                 c for c in player.hand if c.card_type in ok_types
+                             ))]
         return abilities
 
 
@@ -342,7 +363,8 @@ class Druidess(Mage):
 
     def get_abilities(self):
         def effect(state, player):
-            tapped_creature = [card for card in player.board if card.is_tapped and card.card_type is CardType.CREATURE]
+            tapped_creature = [card for card in player.board if card.is_tapped
+                               and card.card_type is CardType.CREATURE]
             if not tapped_creature:
                 print("Aucune créature à désengager")
                 self.tap()
@@ -352,7 +374,10 @@ class Druidess(Mage):
             card.untap()
             self.tap()
 
-        return [Ability("Désengager une créature", cost={}, effect=effect)]
+        return [Ability("Désengager une créature", cost={}, effect=effect,
+                        condition=lambda _s, player, card: not card.is_tapped and any(
+                            c for c in player.board if c.is_tapped and c.card_type is CardType.CREATURE
+                        ))]
 
 
 class Witch(Mage):
@@ -532,8 +557,14 @@ class Draconist(Mage):
             print(f"{player.name} réanime {dragon.name} avec {self.name}")
         
         abilities = [
-            Ability("Poser un dragon à -2", cost={}, effect=effect1),
-            Ability("Revive un dragon", cost={}, effect=effect2)
+            Ability("Poser un dragon à -2", cost={}, effect=effect1,
+                    condition=lambda _s, player, card: not card.is_tapped and any(
+                        c for c in player.hand if c.card_type == CardType.DRAGON
+                    )),
+            Ability("Revive un dragon", cost={}, effect=effect2,
+                    condition=lambda _s, player, card: not card.is_tapped and any(
+                        c for c in player.board if c.is_tapped and c.card_type == CardType.DRAGON
+                    ))
         ]
         return abilities
 

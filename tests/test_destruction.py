@@ -63,3 +63,18 @@ def test_retourne_dans_pool(setup):
         ability = destruction.get_abilities()[0]
         ability.execute(state, player)
     assert destruction in state.scrolls
+
+
+def test_condition_absente_si_aucun_artefact(setup):
+    """La condition est False s'il n'y a aucun artefact sur le board."""
+    state, player, destruction, artifact = setup
+    player.board.remove(artifact)
+    ability = destruction.get_abilities()[0]
+    assert not ability.condition(state, player, destruction)
+
+
+def test_condition_presente_si_artefact(setup):
+    """La condition est True s'il y a un artefact sur le board."""
+    state, player, destruction, artifact = setup
+    ability = destruction.get_abilities()[0]
+    assert ability.condition(state, player, destruction)

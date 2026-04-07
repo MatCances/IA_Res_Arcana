@@ -130,6 +130,22 @@ def test_aucun_dragon_en_defausse(setup):
     assert bestiary.is_tapped == False
 
 
+def test_condition_absente_sans_dragon_en_defausse(setup):
+    """La condition du pouvoir 2 est False si aucun dragon dans les défausses."""
+    engine, player1, player2, bestiary = setup
+    ability = bestiary.get_abilities()[1]
+    assert not ability.condition(engine.state, player1, bestiary)
+
+
+def test_condition_presente_avec_dragon_en_defausse(setup):
+    """La condition du pouvoir 2 est True si un dragon est dans une défausse."""
+    engine, player1, player2, bestiary = setup
+    dragon = BoneDragon()
+    player2.discard.append(dragon)
+    ability = bestiary.get_abilities()[1]
+    assert ability.condition(engine.state, player1, bestiary)
+
+
 def test_dragon_depuis_sa_propre_defausse(setup):
     """Peut récupérer un dragon de sa propre défausse"""
     engine, player1, player2, bestiary = setup

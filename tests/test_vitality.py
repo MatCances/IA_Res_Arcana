@@ -57,3 +57,18 @@ def test_retourne_dans_pool(setup):
         ability = vitality.get_abilities()[0]
         ability.execute(state, player)
     assert vitality in state.scrolls
+
+
+def test_condition_absente_si_aucune_carte_engagee(setup):
+    """La condition est False si aucune carte engagée."""
+    state, player, vitality, card = setup
+    card.untap()
+    ability = vitality.get_abilities()[0]
+    assert not ability.condition(state, player, vitality)
+
+
+def test_condition_presente_si_carte_engagee(setup):
+    """La condition est True si une carte est engagée."""
+    state, player, vitality, card = setup
+    ability = vitality.get_abilities()[0]
+    assert ability.condition(state, player, vitality)

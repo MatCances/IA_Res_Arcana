@@ -49,3 +49,18 @@ def test_pas_assez_calm(setup):
     player.resources.remove(Resource.CALM, 1)
     ability = augur.get_abilities()[0]
     assert not player.can_afford(ability)
+
+
+def test_condition_absente_si_pioche_vide(setup):
+    """La condition est False si la pioche est vide."""
+    state, player, augur, card = setup
+    player.deck = []
+    ability = augur.get_abilities()[0]
+    assert not ability.condition(state, player, augur)
+
+
+def test_condition_presente_si_pioche_non_vide(setup):
+    """La condition est True si la pioche contient des cartes."""
+    state, player, augur, card = setup
+    ability = augur.get_abilities()[0]
+    assert ability.condition(state, player, augur)
