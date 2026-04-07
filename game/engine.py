@@ -181,54 +181,50 @@ class Engine:
             f"Attaque — {target.name} reçoit {damage} dégâts",
             data={"target": target.name, "damage": damage}
         )
-        
+
         attack_context = {
             "damage": damage,
             "cancelled": False
         }
-        
-        # 1. les cartes de réaction disponibles
-        reaction_cards = [card for card in target.board if not card.is_tapped]
-        
-        # 2. proposer au joueur de payer ou d'utiliser une carte
-        print(f"\n{target.name}, comment voulez-vous résoudre l'attaque ?")
-        print(f"1 - Payer les dégâts ({damage} LIFE, ou 2 ressources par LIFE manquant)")
-        for i, card in enumerate(reaction_cards):
-            print(f"{i+2} - Utiliser {card.name}")
-        
-        choice = 0
-        while choice < 1 or choice > 1 + len(reaction_cards):
-            try:
-                choice = int(input("Votre choix : "))
-            except ValueError:
-                pass
-        
-        # 3. si le joueur utilise une carte de réaction
-        if choice > 1:
-            card = reaction_cards[choice - 2]
-            card.on_event(GameEvent.ATTACK, self.state, target, context=attack_context)
-            if attack_context["cancelled"]:
-                self.logger.action(
-                    f"{target.name} esquive l'attaque",
-                    data={"target": target.name}
-                )
-                return
-        
-        # 4. absorber les dégâts avec des LIFE
+
+        # Cartes de réaction disponibles
+        reaction_cards = [
+            card for card in target.board
+            if card.has_attack_reaction
+            and (not card.is_tapped or not card.attack_reaction_requires_untapped)
+        ]
+
+        # print("DEBUG>>> Target.board: ", target.board)
+        # print("DEBUG>>> Reaction cards: ", reaction_cards)
+
+        if reaction_cards:
+            options = ["Subir les dégâts"] + [card.name for card in reaction_cards]
+            choice = target.choose_option(options)
+            if choice > 0:
+                chosen = reaction_cards[choice - 1]
+                chosen.on_event(GameEvent.ATTACK, self.state, target, context=attack_context)
+
+        if attack_context["cancelled"]:
+            self.logger.action(
+                f"{target.name} esquive l'attaque",
+                data={"target": target.name}
+            )
+            return
+
+        # Absorber les dégâts avec les LIFE disponibles
         damage = attack_context["damage"]
         life_available = target.resources.resources[Resource.LIFE]
         life_paid = min(life_available, damage)
         target.resources.remove(Resource.LIFE, life_paid)
         remaining = damage - life_paid
-        
-        # 5. pour chaque LIFE manquant, payer 2 ressources
+
+        # Pour chaque LIFE manquant, payer 2 ressources si disponibles
         for _ in range(remaining):
-            print(f"{target.name} n'a pas assez de LIFE, choisissez 2 ressources :")
             for _ in range(2):
                 available = target.resources.available()
                 if not available:
-                    print("Plus aucune ressource disponible !")
                     break
+                print(f"{target.name} n'a pas assez de LIFE, choisissez une ressource :")
                 resource = target.choose_resource(available)
                 target.resources.remove(resource, 1)
 

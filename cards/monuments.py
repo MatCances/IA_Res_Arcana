@@ -277,6 +277,8 @@ class Pantheon(Monument):
 class GreatWall(Monument):
     def __init__(self):
         super().__init__("Grande Muraille")
+        self.has_attack_reaction = True
+        self.attack_reaction_requires_untapped = False
     
     def on_event(self, event, state, source_player, **kwargs):
         if event == GameEvent.ATTACK:
@@ -340,6 +342,8 @@ class Oracle(Monument):
 class Temple(Monument):
     def __init__(self):
         super().__init__("Temple")
+        self.has_attack_reaction = True
+        self.attack_reaction_requires_untapped = True
     
     def collect_base(self, state, player):
         player.resources.add(Resource.LIFE, 1)

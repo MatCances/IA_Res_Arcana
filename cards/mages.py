@@ -471,6 +471,8 @@ class Transmuter(Mage):
 class Healer(Mage):
     def __init__(self):
         super().__init__(name="Guérisseur")
+        self.has_attack_reaction = True
+        self.attack_reaction_requires_untapped = True
     
     def collect_base(self, state, player):
         choices = (Resource.CALM, Resource.LIFE)

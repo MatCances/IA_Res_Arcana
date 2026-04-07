@@ -21,10 +21,13 @@ class Artifact(Card):
         total_fixed = sum(fixed_cost.values())
         fixed_to_pay = max(0, total_fixed - total_reduc)
 
+        paid_resources = {}
+
         if not reductions:
             # Pas de réduction : paiement direct des ressources fixes
             for r, amount in fixed_cost.items():
                 player.resources.remove(r, amount)
+                paid_resources[r.value] = paid_resources.get(r.value, 0) + amount
         else:
             # Réduction active : le joueur choisit lesquelles payer, capé par le max du coût
             if fixed_to_pay > 0:
@@ -36,6 +39,7 @@ class Artifact(Card):
                     resource = player.choose_resource(choices)
                     player.resources.remove(resource, 1)
                     paid[resource] += 1
+                    paid_resources[resource.value] = paid_resources.get(resource.value, 0) + 1
 
         # Payer les slots ANY librement (hors GOLD et PEARL), indépendamment des réductions
         if any_count > 0:
@@ -46,11 +50,16 @@ class Artifact(Card):
                            and player.resources.has(r, 1)]
                 resource = player.choose_resource(choices)
                 player.resources.remove(resource, 1)
+                paid_resources[resource.value] = paid_resources.get(resource.value, 0) + 1
 
         # Ajoute la carte au plateau du joueur et la retire de sa main
         player.board.append(self)
         player.hand.remove(self)
         print(f"{player.name} joue {self.name}")
+        state.logger.decision(
+            f"{player.name} paie {paid_resources} pour jouer {self.name}",
+            data={"player": player.name, "card": self.name, "paid": paid_resources}
+        )
         return True
 
     def destroy(self, state, player):
@@ -351,6 +360,8 @@ class ElementarySource(Artifact):
         name = "Source Elementaire"
         cost = {Resource.ELAN: 2, Resource.LIFE: 1, Resource.CALM: 1}
         super().__init__(name, cost)
+        self.has_attack_reaction = True
+        self.attack_reaction_requires_untapped = False
     
     def collect_base(self, state, player):
         player.resources.add(Resource.LIFE, 1)
@@ -547,6 +558,8 @@ class Dolfin(Artifact):
         super().__init__(name="Dauphin",
                          cost={Resource.GOLD: 2, Resource.LIFE: 2, Resource.CALM: 2},
                          card_type=CardType.CREATURE)
+        self.has_attack_reaction = True
+        self.attack_reaction_requires_untapped = False
     
     def collect_base(self, state, player):
         player.resources.add(Resource.PEARL, 1)
@@ -672,6 +685,8 @@ class Moloss(Artifact):
         super().__init__(name="Molosse",
                          cost={Resource.ELAN: 1},
                          card_type=CardType.CREATURE)
+        self.has_attack_reaction = True
+        self.attack_reaction_requires_untapped = True
     
     def on_event(self, event, state, source_player, **kwargs):
         if event == GameEvent.ATTACK:
@@ -724,6 +739,8 @@ class KeenSword(Artifact):
     def __init__(self):
         super().__init__(name="Epée Vive",
                          cost={Resource.GOLD: 1, Resource.ELAN: 1})
+        self.has_attack_reaction = True
+        self.attack_reaction_requires_untapped = False
     
     def collect_base(self, state, player):
         player.resources.add(Resource.DEATH, 1)
@@ -747,6 +764,8 @@ class GoldLion(Artifact):
         super().__init__(name="Lion d'Or",
                          cost={Resource.ELAN: 2, Resource.LIFE: 1, Resource.CALM: 1, Resource.GOLD: 1},
                          card_type=CardType.CREATURE)
+        self.has_attack_reaction = True
+        self.attack_reaction_requires_untapped = True
     
     def score(self, state, player):
         return 1
@@ -772,6 +791,8 @@ class LifeChalice(Artifact):
     def __init__(self):
         super().__init__(name="Calice de Vie",
                          cost={Resource.GOLD: 1, Resource.LIFE: 1, Resource.CALM: 1})
+        self.has_attack_reaction = True
+        self.attack_reaction_requires_untapped = True
     
     def collect_base(self, state, player):
         player.resources.add(Resource.CALM, 1)
@@ -1292,6 +1313,8 @@ class LifeTree(Artifact):
     def __init__(self):
         super().__init__(name="Arbre de Vie",
                          cost={Resource.LIFE: 1, Resource.ANY: 2})
+        self.has_attack_reaction = True
+        self.attack_reaction_requires_untapped = False
     
     def on_event(self, event, state, source_player, **kwargs):
         if event == GameEvent.ATTACK:

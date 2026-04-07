@@ -34,16 +34,14 @@ def setup():
 
 
 def test_attaque_paye_life(setup):
-    """Le joueur attaqué paie 2 LIFE"""
+    """Le joueur attaqué paie 2 LIFE (aucune réaction)"""
     engine, player1, player2, dragon = setup
-    with patch('builtins.input', side_effect=['2', '1']):
-        # 2 = pas d'esquive DEATH, 1 = payer les dégâts
-        engine.resolve_attack(player2, damage=2)
+    engine.resolve_attack(player2, damage=2)
     assert player2.resources.resources[Resource.LIFE] == 2
 
 
 def test_attaque_esquive_death(setup):
-    """Le joueur attaqué esquive en payant 1 DEATH"""
+    """Le joueur attaqué esquive en payant 1 DEATH via le pouvoir du dragon"""
     engine, player1, player2, dragon = setup
     player2.resources.add(Resource.DEATH, 1)
     ability = dragon.get_abilities()[0]
@@ -58,25 +56,36 @@ def test_attaque_life_manquant(setup):
     engine, player1, player2, dragon = setup
     player2.resources.remove(Resource.LIFE, 3)  # il ne lui reste que 1 LIFE
     player2.resources.add(Resource.ELAN, 2)
-    with patch('builtins.input', side_effect=['2', '1', '1', '1']):
-        # 2 = pas d'esquive, 1 = payer, puis 2x choisir ELAN
+    with patch.object(player2, 'choose_resource', side_effect=[Resource.ELAN, Resource.ELAN]):
         engine.resolve_attack(player2, damage=2)
     assert player2.resources.resources[Resource.LIFE] == 0
     assert player2.resources.resources[Resource.ELAN] == 0
 
 
 def test_grande_muraille_esquive(setup):
-    """La Grande Muraille annule l'attaque"""
+    """La Grande Muraille annule l'attaque en payant 1 ELAN"""
     engine, player1, player2, dragon = setup
     wall = GreatWall()
     player2.board.append(wall)
     player2.resources.add(Resource.ELAN, 1)
-    with patch('builtins.input', side_effect=['2', '1']):
-        # 2 = utiliser une carte, 1 = activer la Grande Muraille
-        engine.resolve_attack(player2, damage=2)
+    with patch.object(player2, 'choose_option', return_value=1):
+        with patch.object(player2, 'choose_yes_no', return_value=True):
+            engine.resolve_attack(player2, damage=2)
     assert player2.resources.resources[Resource.LIFE] == 4
     assert player2.resources.resources[Resource.ELAN] == 0
-    assert wall.is_tapped == False
+
+
+def test_grande_muraille_refuse(setup):
+    """Le joueur refuse d'utiliser la Grande Muraille, paie en LIFE"""
+    engine, player1, player2, dragon = setup
+    wall = GreatWall()
+    player2.board.append(wall)
+    player2.resources.add(Resource.ELAN, 1)
+    with patch.object(player2, 'choose_option', return_value=1):
+        with patch.object(player2, 'choose_yes_no', return_value=False):
+            engine.resolve_attack(player2, damage=2)
+    assert player2.resources.resources[Resource.LIFE] == 2
+    assert player2.resources.resources[Resource.ELAN] == 1  # non dépensé
 
 
 def test_grande_muraille_pas_elan(setup):
@@ -84,7 +93,7 @@ def test_grande_muraille_pas_elan(setup):
     engine, player1, player2, dragon = setup
     wall = GreatWall()
     player2.board.append(wall)
-    with patch('builtins.input', side_effect=['1']):
+    with patch.object(player2, 'choose_option', return_value=0):
         engine.resolve_attack(player2, damage=2)
     assert player2.resources.resources[Resource.LIFE] == 2
     assert wall.is_tapped == False

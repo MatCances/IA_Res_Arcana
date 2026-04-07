@@ -73,6 +73,8 @@ class Alchemy(Obj):
 class Protection(Obj):
     def __init__(self):
         super().__init__("Protection")
+        self.has_attack_reaction = True
+        self.attack_reaction_requires_untapped = True
     
     def on_event(self, event, state, source_player, **kwargs):
         if event == GameEvent.ATTACK and not self.is_tapped:

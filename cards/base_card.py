@@ -10,6 +10,8 @@ class Card:
         self.card_type = card_type
         self.is_tapped = False
         self.reduction_effect = None
+        self.has_attack_reaction = False
+        self.attack_reaction_requires_untapped = True
 
         # Les ressources presentes sur la carte
         self.resources_on = ResourcePool()

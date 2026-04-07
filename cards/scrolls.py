@@ -33,6 +33,8 @@ class Vitality(Scroll):
 class Shield(Scroll):
     def __init__(self):
         super().__init__("Bouclier", cost={})
+        self.has_attack_reaction = True
+        self.attack_reaction_requires_untapped = False
     
     def on_event(self, event, state, source_player, **kwargs):
         if event == GameEvent.ATTACK and not self.is_tapped:

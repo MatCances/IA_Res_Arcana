@@ -12,7 +12,7 @@ from cards.scrolls import ALL_SCROLLS
 if __name__ == "__main__":
     players = [AIPlayer("IA-1"), AIPlayer("IA-2")]
 
-    logger = Logger(level=1, silent=False)
+    logger = Logger(level=2, silent=False)
 
     engine = Engine(
         players=players,
