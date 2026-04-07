@@ -1,3 +1,2 @@
-TODO: quand tous les artefacts seront implémenté, faire des tests en mode vrai game totale jusqu'a la victoire
-pour tester plusieurs artefacts en meme temps. 
-
+Projet sur le jeu de société Res Arcana. Le projet consiste à développer le moteur du jeu,
+et créer une IA qui apprend en jouant contre elle-même.

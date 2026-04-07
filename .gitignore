@@ -82,3 +82,9 @@ Thumbs.db
 
 *.tmp
 *.bak
+
+# BMAD
+_bmad/
+_bmad-output/
+design-artifacts/
+.claude/
