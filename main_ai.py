@@ -1,5 +1,4 @@
 from game.engine import Engine
-from game.human_player import HumanPlayer
 from game.ai_player import AIPlayer
 from utils.logger import Logger
 
@@ -11,7 +10,7 @@ from cards.monuments import ALL_MONUMENTS
 from cards.scrolls import ALL_SCROLLS
 
 if __name__ == "__main__":
-    players = [HumanPlayer("Kanss"), HumanPlayer("Zib")]
+    players = [AIPlayer("IA-1"), AIPlayer("IA-2")]
 
     logger = Logger(level=1, silent=False)
 
@@ -28,4 +27,5 @@ if __name__ == "__main__":
 
     engine.run()
 
-    logger.save("logs/partie", fmt="both")
+    logger.save("logs/partie_ai", fmt="both")
+    print(f"Partie terminée. Logs sauvegardés dans logs/partie_ai.log et logs/partie_ai.json")

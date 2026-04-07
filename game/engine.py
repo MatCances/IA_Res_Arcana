@@ -56,7 +56,7 @@ class Engine:
     def _give_starting_resources(self):
         for player in self.state.players:
             for resource in Resource.real():
-                player.resources.add(resource, 1)
+                player.resources.add(resource, 11)
     
     def _setup_board(self):
         self.state.places_of_power = rd.sample(self.available_places_of_power, 4)
@@ -64,26 +64,27 @@ class Engine:
         # Les 2 premier monuments face visibles
         self.state.monuments_visible = monuments_pool[:2]
         self.state.monuments_deck = monuments_pool[2:]
-        print("\n+===== MISE EN PLACE =====")
-        print("Lieux de pouvoir :")
-        for p in self.state.places_of_power:
-            print(f"  - {p.name}")
-        print("Monuments disponibles :")
-        for m in self.state.monuments_visible:
-            print(f"  - {m.name}")
+        places = [p.name for p in self.state.places_of_power]
+        monuments = [m.name for m in self.state.monuments_visible]
+        self.logger.action(
+            f"Mise en place — lieux: {places} | monuments visibles: {monuments}",
+            data={"places_of_power": places, "monuments_visible": monuments}
+        )
     
     def _deal_mage_choices(self):
         mage_pool = rd.sample(self.available_mages, len(self.state.players) * 2)
         for i, player in enumerate(self.state.players):
             player.mage_choices = mage_pool[i * 2 : i * 2 + 2]
-            print(f"\n{player.name}, vos mages proposés :")
-            for mage in player.mage_choices:
-                print(f"  - {mage.name}")
+            choices = [m.name for m in player.mage_choices]
+            self.logger.action(
+                f"{player.name} — mages proposés: {choices}",
+                data={"player": player.name, "mage_choices": choices}
+            )
 
     def _draft_phase(self):
         """Draft : 2 tours de 4 cartes, chaque joueur choisit 1 carte et passe les autres."""
         for draft_round in range(2):
-            print(f"\n+===== DRAFT - Tour {draft_round + 1} =====")
+            self.logger.action(f"Draft — tour {draft_round + 1}")
             # distribuer 4 cartes à chaque joueur
             hands = []
             for player in self.state.players:
@@ -104,6 +105,10 @@ class Engine:
                     chosen = player.choose_card(hand)
                     hand.remove(chosen)
                     player.hand.append(chosen)
+                    self.logger.action(
+                        f"{player.name} draft {chosen.name}",
+                        data={"player": player.name, "card": chosen.name}
+                    )
 
                     # passe les cartes restantes au joueur suivant
                     next_idx = (idx + 1) % len(self.state.players)
@@ -113,7 +118,10 @@ class Engine:
     def _choose_first_player(self):
         self.state.current_player = rd.randint(0, len(self.state.players) - 1)
         first = self.state.players[self.state.current_player]
-        print(f"\n+===== PREMIER JOUEUR : {first.name} =====")
+        self.logger.action(
+            f"Premier joueur : {first.name}",
+            data={"first_player": first.name}
+        )
 
     def _draw_starting_hand(self):
         """Chaque joueur pioche 3 cartes depuis sa main de draft."""
@@ -123,35 +131,38 @@ class Engine:
                 player.hand.remove(card)
             player.deck = player.hand   # les cartes restantes vont dans la pioche
             player.hand = drawn
-            print(f"\n{player.name} pioche 3 cartes :")
-            for card in player.hand:
-                print(f"  - {card.name}")
+            hand_names = [c.name for c in player.hand]
+            self.logger.action(
+                f"{player.name} pioche sa main de départ : {hand_names}",
+                data={"player": player.name, "starting_hand": hand_names}
+            )
 
     def _choose_mages(self):
         for player in self.state.players:
-
             print(f"\n{player.name}, choisissez votre mage :")
             chosen_mage = player.choose_card(player.mage_choices)
-
             player.set_mage(chosen_mage)
             player.board.append(chosen_mage)
-            print(f"{player.name} choisit {player.mage.name}")
+            self.logger.action(
+                f"{player.name} choisit le mage {chosen_mage.name}",
+                data={"player": player.name, "mage": chosen_mage.name}
+            )
     
     def _choose_objects(self):
         """Choix des objets en sens antihoraire en commençant par le dernier joueur."""
         n = len(self.state.players)
         order = [(self.state.current_player - 1 - i) % n for i in range(n)]
-        print("\n+===== CHOIX DES OBJETS =====")
         for idx in order:
             player = self.state.players[idx]
-
             print(f"\n{player.name}, choisissez un objet :")
             chosen = player.choose_card(self.state.objects)
             self.state.objects.remove(chosen)
             player.object = chosen
             player.board.append(chosen)
-
-            print(f"{player.name} choisit {chosen.name}")
+            self.logger.action(
+                f"{player.name} choisit l'objet {chosen.name}",
+                data={"player": player.name, "object": chosen.name}
+            )
     
     def dispatch_event(self, event, source_player, **kwargs):
         """Notifie toutes les cartes en jeu d'un événement.
@@ -166,7 +177,10 @@ class Engine:
                 card.on_event(event, self.state, source_player, **kwargs)
     
     def resolve_attack(self, target, damage):
-        print(f"\n[Attaque] {target.name} reçoit {damage} dégâts !")
+        self.logger.action(
+            f"Attaque — {target.name} reçoit {damage} dégâts",
+            data={"target": target.name, "damage": damage}
+        )
         
         attack_context = {
             "damage": damage,
@@ -194,7 +208,10 @@ class Engine:
             card = reaction_cards[choice - 2]
             card.on_event(GameEvent.ATTACK, self.state, target, context=attack_context)
             if attack_context["cancelled"]:
-                print(f"{target.name} esquive l'attaque !")
+                self.logger.action(
+                    f"{target.name} esquive l'attaque",
+                    data={"target": target.name}
+                )
                 return
         
         # 4. absorber les dégâts avec des LIFE
@@ -217,10 +234,12 @@ class Engine:
 
     def collect_phase(self):
         """Étape 1 : collecte fixe puis collecte des ressources posées sur les cartes."""
-        print("\n+===== PHASE DE COLLECTE =====")
+        self.logger.action(f"--- Phase de collecte (manche {self.state.turn}) ---")
         for player in self.state.players:
-            print(f"\n--- {player.name} ---")
-            print(f" Resources: {player.resources}")
+            self.logger.state(
+                f"{player.name} — ressources avant collecte : {player.resources}",
+                data={"player": player.name, "resources": dict(player.resources.resources)}
+            )
 
             # collecte des ressources posées sur les cartes (tout ou rien)
             for card in player.board:
@@ -239,7 +258,11 @@ class Engine:
                     for r, a in stored.items():
                         player.resources.add(r, a)
                         card.resources_on.remove(r, a)
-                    print("Ressources récupérées.")
+                    self.logger.action(
+                        f"{player.name} récupère les ressources de {card.name} : {stored}",
+                        data={"player": player.name, "card": card.name,
+                              "resources_taken": {r.value: a for r, a in stored.items()}}
+                    )
         
             # collecte fixe de toutes les cartes
             for card in player.board:
@@ -288,9 +311,7 @@ class Engine:
     
     def action_phase(self):
         """Étape 2 : les joueurs jouent chacun leur tour jusqu'à ce que tout le monde passe."""
-        print("\n+===========================")
-        print("+===== PHASE D'ACTIONS =====")
-        print("+===========================")
+        self.logger.action(f"--- Phase d'actions (manche {self.state.turn}) ---")
         passed = {player: False for player in self.state.players}
         first_to_pass = None
 
@@ -303,11 +324,19 @@ class Engine:
                     return
 
                 display_state(self.state)
-                print(f"\n --> Tour de {player.name}")
-                print(f" Resources: {player.resources}")
+                self.logger.state(
+                    f"Tour de {player.name} — ressources : {player.resources}",
+                    data={"player": player.name, "resources": dict(player.resources.resources)}
+                )
 
                 actions = self.available_actions(player)
                 action = player.choose_action(actions)
+
+                self.logger.action(
+                    f"{player.name} joue : {action.name}",
+                    data={"player": player.name, "action": action.name}
+                )
+
                 action.execute(self.state, player)
 
                 if action.name == "Passer le tour":
@@ -317,7 +346,10 @@ class Engine:
                     if first_to_pass is None:
                         first_to_pass = player
                         self.first_player_tile = player
-                        print(f"{player.name} prend la tuile 1er joueur !")
+                        self.logger.action(
+                            f"{player.name} prend la tuile 1er joueur",
+                            data={"player": player.name}
+                        )
 
                     # échange son objet
                     self._exchange_object(player)
@@ -341,7 +373,7 @@ class Engine:
         """Le joueur échange son objet avec un disponible sur le plateau."""
 
         if not self.state.objects:
-            print("Aucun objet disponible.")
+            self.logger.action(f"{player.name} — aucun objet disponible à l'échange")
             return
 
         print(f"\n{player.name}, échangez votre objet ({player.object.name}) :")
@@ -352,42 +384,51 @@ class Engine:
         player.object = chosen
         player.board.append(player.object)
         self.state.objects.append(old_object)
-        print(f"{player.name} échange {old_object.name} contre {player.object.name}")
+        self.logger.action(
+            f"{player.name} échange {old_object.name} contre {chosen.name}",
+            data={"player": player.name, "old_object": old_object.name, "new_object": chosen.name}
+        )
 
     def _draw_card(self, player):
         """Le joueur pioche une carte de sa pioche."""
         if not player.deck:
-            print(f"{player.name} n'a plus de cartes dans sa pioche.")
+            self.logger.action(f"{player.name} — pioche vide", data={"player": player.name})
             return
         card = player.deck.pop(0)
         player.hand.append(card)
-        print(f"{player.name} pioche {card.name}")
+        self.logger.action(
+            f"{player.name} pioche {card.name}",
+            data={"player": player.name, "card": card.name}
+        )
     
     def victory_check(self):
         """Étape 3 : vérifie si un joueur a atteint 13 points."""
         self.dispatch_event(GameEvent.VICTORY_CHECK, None)
-        
-        for player in self.state.players:
-            points = player.points
-            print(f"{player.name} : {points} points")
-        
+
+        scores = {p.name: p.points for p in self.state.players}
+        self.logger.action(
+            f"Contrôle de victoire — scores : {scores}",
+            data={"scores": scores}
+        )
+
         max_score = max(p.points for p in self.state.players)
-        
-        print(f"max score dans victory check: {max_score}")
+
         if max_score < WINNING_SCORE:
-            # On retire les points bonus de tous les joueurs si moins de 13
             for p in self.state.players:
                 p.bonus_points = 0
             return None
-        
+
         winners = [p for p in self.state.players if p.points == max_score]
-        
+
         if len(winners) > 1:
-            print("Égalité ! Match nul.")
+            self.logger.action("Égalité — match nul", data={"result": "draw", "scores": scores})
             return "draw"
-        
+
         winner = winners[0]
-        print(f"\n {winner.name} gagne la partie !")
+        self.logger.action(
+            f"{winner.name} gagne la partie !",
+            data={"winner": winner.name, "score": winner.points}
+        )
         return winner
 
     def untap_all(self):
@@ -399,7 +440,8 @@ class Engine:
     def run(self):
         self.setup()
         while True:
-            print(f"\n+===== MANCHE {self.state.turn} =====")
+            self.logger.set_turn(self.state.turn)
+            self.logger.action(f"====== Manche {self.state.turn} ======")
             self.collect_phase()
             self.action_phase()
             if self.game_over:

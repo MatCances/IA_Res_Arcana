@@ -14,23 +14,38 @@ class Artifact(Card):
             return False
 
         reductions = player.get_applicable_reductions(self)
+        total_reduc = sum(r["value"] for r in reductions)
+
+        fixed_cost = {r: a for r, a in self.cost.items() if r != Resource.ANY}
+        any_count = self.cost.get(Resource.ANY, 0)
+        total_fixed = sum(fixed_cost.values())
+        fixed_to_pay = max(0, total_fixed - total_reduc)
 
         if not reductions:
-            # Pas de réduction : paiement normal
-            for r, amount in self.cost.items():
+            # Pas de réduction : paiement direct des ressources fixes
+            for r, amount in fixed_cost.items():
                 player.resources.remove(r, amount)
         else:
-            # Réduction active : le joueur choisit les ressources qu'il paye
-            total_reduc = sum(r["value"] for r in reductions)
-            total_cost = sum(self.cost.values())
-            reduced_cost = max(0, total_cost - total_reduc)
+            # Réduction active : le joueur choisit lesquelles payer, capé par le max du coût
+            if fixed_to_pay > 0:
+                print(f"Choisissez {fixed_to_pay} ressource(s) à payer pour {self.name} :")
+                paid = {r: 0 for r in fixed_cost}
+                for _ in range(fixed_to_pay):
+                    choices = [r for r, cap in fixed_cost.items()
+                               if paid[r] < cap and player.resources.has(r, 1)]
+                    resource = player.choose_resource(choices)
+                    player.resources.remove(resource, 1)
+                    paid[resource] += 1
 
-            print(f"Choisissez {reduced_cost} ressource(s) à payer pour {self.name} (réduction de {total_reduc}) :")
-            choices = [r for r, amount in self.cost.items() if player.resources.has(r, 1)]
-            for _ in range(reduced_cost):
+        # Payer les slots ANY librement (hors GOLD et PEARL), indépendamment des réductions
+        if any_count > 0:
+            print(f"Choisissez {any_count} ressource(s) libres à payer pour {self.name} :")
+            for _ in range(any_count):
+                choices = [r for r in Resource.real()
+                           if r not in {Resource.GOLD, Resource.PEARL}
+                           and player.resources.has(r, 1)]
                 resource = player.choose_resource(choices)
                 player.resources.remove(resource, 1)
-                choices = [r for r, amount in self.cost.items() if player.resources.has(r, 1)]
 
         # Ajoute la carte au plateau du joueur et la retire de sa main
         player.board.append(self)

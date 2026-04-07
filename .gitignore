@@ -82,6 +82,7 @@ Thumbs.db
 
 *.tmp
 *.bak
+logs/
 
 # BMAD
 _bmad/
