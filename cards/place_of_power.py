@@ -1,5 +1,6 @@
 from cards.base_card import Card
-from utils.constant import Resource, CardType
+from cards.artifacts import Artifact
+from utils.constant import Resource, CardType, GameEvent
 from game.ability import Ability
 
 
@@ -17,11 +18,15 @@ class MysticalMenagerie(PlaceOfPower):
                                  "excluded": [Resource.GOLD, Resource.PEARL],
                                  "card_type": [CardType.CREATURE]}
     
+    def score(self, state, player):
+        creatures = [c for c in player.board if c.card_type == CardType.CREATURE]
+        return len(creatures) + self.resources_on.get_amount(Resource.CALM)
+    
     def get_abilities(self):
         def effect1(state, player):
             untapped_creatures = [c for c in player.board if not c.is_tapped
                                  and c.card_type in [CardType.CREATURE, CardType.ILLUSIONIST]]
-            chosen_creature = player.choose_card(untapped_creatures)
+            chosen_creature = player.choose_card(untapped_creatures, state)
             player.resources.remove(Resource.CALM, 1)
             player.draw()
             chosen_creature.tap()
@@ -64,7 +69,7 @@ class SacredGrove(PlaceOfPower):
         def effect2(state, player):
             untapped_creatures = [c for c in player.board if not c.is_tapped
                                  and c.card_type in [CardType.CREATURE, CardType.ILLUSIONIST]]
-            chosen_creature = player.choose_card(untapped_creatures)
+            chosen_creature = player.choose_card(untapped_creatures, state)
             chosen_creature.tap()
             self.tap()
             self.resources_on.add(Resource.LIFE, 1)
@@ -332,10 +337,375 @@ class WizardBestiary(PlaceOfPower):
             ]
 
 
+class AlchemistLaboratory(PlaceOfPower):
+    def __init__(self):
+        super().__init__(name="Laboratoire Alchimique",
+                         cost={Resource.ELAN: 3,
+                               Resource.CALM: 3,
+                               Resource.GOLD: 2})
+    
+    def score(self, state, player):
+        return 2
+
+    def get_abilities(self):
+        def effect1(state, player):
+            player.resources.remove(Resource.CALM, 1)
+            player.resources.remove(Resource.ELAN, 1)
+            player.resources.remove(Resource.PEARL, 1)
+            self.resources_on.add(Resource.GOLD, 2)
+            self.resources_on.add(Resource.PEARL, 1)
+        
+        def effect2(state, player):
+            player.resources.remove(Resource.ELAN, 2)
+            excluded = {Resource.PEARL}
+            res = player.choose_ressource(player.resources.available(excluded=excluded), state)
+            player.resources.remove(res, 1)
+            player.resources.add(Resource.PEARL, 1)
+            self.tap()
+        
+        abilities = [Ability(f"1 CALM, 1 ELAN, 1 PEARL pour mettre 1 PEARL et 2 GOLD sur {self.name}",
+                             cost={Resource.CALM: 1, Resource.ELAN: 1, Resource.PEARL: 1},
+                             effect=effect1),
+                     Ability("2 ELAN et 1 ressource au choix pour obtenir une perle",
+                             cost={Resource.ELAN: 2, Resource.ANY: 1},
+                             effect=effect2)]
+        return abilities
+
+
+class DwarfMine(PlaceOfPower):
+    def __init__(self):
+        super().__init__(name="Mine des Nains",
+                         cost={Resource.ELAN: 4, Resource.LIFE: 2, Resource.GOLD: 1})
+    
+    def collect_base(self, state, player):
+        player.resources.add(Resource.GOLD, 1)
+    
+    def score(self, state, player):
+        return self.resources_on.get_amount(Resource.GOLD)
+
+    def get_abilities(self):
+        def effect1(state, player):
+            player.resources.remove(Resource.ELAN, 5)
+            player.resources.add(Resource.GOLD, 3)
+            self.tap()
+
+        def effect2(state, player):
+            player.resources.remove(Resource.DEATH, 3)
+            player.resources.remove(Resource.ELAN, 3)
+            self.resources_on.add(Resource.GOLD, 2)
+            self.tap()
+        
+        abilities = [Ability(f"5 ELAN pour obtenir 3 GOLD",
+                             cost={Resource.ELAN: 5},
+                             effect=effect1),
+                     Ability(f"3 DEATH et 3 ELAN pour mettre 2 GOLD sur {self.name}",
+                             cost={Resource.ELAN: 3, Resource.DEATH: 3},
+                             effect=effect2)]
+        return abilities
+
+
+class CursedForge(PlaceOfPower):
+    def __init__(self):
+        super().__init__(name="Forge Maudite",
+                         cost={Resource.ELAN: 6, Resource.DEATH: 3})
+    
+    def collect_base(self, state, player):
+        options = ["Payer un DEATH", f"Engager {self.name}"]
+        choice = player.choose_option(options, state)
+        if choice == 0:
+            player.resources.remove(Resource.DEATH)
+        elif choice == 1:
+            self.tap()
+        else:
+            raise ValueError("This should never happend")
+    
+    def score(self, state, player):
+        return 1 + self.resources_on.get_amount(Resource.GOLD)
+    
+    def get_abilities(self):
+        def effect1(state, player):
+            player.resources.remove(Resource.ELAN, 2)
+            player.resources.remove(Resource.GOLD, 1)
+            self.resources_on.add(Resource.GOLD, 1)
+    
+        
+        abilities = [Ability(f"2 ELAN et 1 GOLD pour mettre 1 GOLD sur {self.name}",
+                             cost={Resource.ELAN: 2, Resource.GOLD: 1},
+                             effect=effect1)]
+        return abilities
+
+
+class AlchemistTower(PlaceOfPower):
+    def __init__(self):
+        super().__init__(name="Tour de l'Alchimiste",
+                         cost={Resource.GOLD: 3})
+        self.has_attack_reaction = True
+        self.attack_reaction_requires_untapped = True
+    
+    def score(self, state, player):
+        return self.resources_on.get_amount(Resource.GOLD)
+
+    def collect_base(self, state, player):
+        choices = [r for r in Resource.real() if r not in (Resource.GOLD, Resource.PEARL)]
+        for _ in range(3):
+            res = player.choose_resource(choices, state)
+            player.resources.add(res, 1)
+    
+    def on_event(self, event, state, source_player, **kwargs):
+        if event == GameEvent.ATTACK and not self.is_tapped:
+            owner = next(p for p in state.players if self in p.board)
+
+            if owner.choose_yes_no(f"\n[Réaction] {owner.name} : engager {self.name} ?", state):
+                self.tap()
+                kwargs.get('context')['cancelled'] = True
+                print(f"[Réaction] {self.name} : attaque annulée !")
+    
+    def get_abilities(self):
+        def effect1(state, player):
+            player.resources.remove(Resource.ELAN, 1)
+            player.resources.remove(Resource.CALM, 1)
+            player.resources.remove(Resource.LIFE, 1)
+            player.resources.remove(Resource.DEATH, 1)
+            self.resources_on.add(Resource.GOLD, 1)
+        
+        abilities = [Ability(f"1 LIFE/CALM/ELAN/DEATH pour mettre 1 GOLD sur {self.name}",
+                             cost={Resource.ELAN: 1,
+                                   Resource.LIFE: 1,
+                                   Resource.CALM: 1,
+                                   Resource.DEATH: 1},
+                             effect=effect1)]
+        return abilities
+
+
+class DragonsCave(PlaceOfPower):
+    def __init__(self):
+        super().__init__(name="Antre de Dragon",
+                         cost={Resource.ELAN: 8,
+                               Resource.LIFE: 4})
+    
+    def collect_base(self, state, player):
+        player.resources.add(Resource.GOLD, 1)
+    
+    def score(self, state, player):
+        return self.resources_on.get_amount(Resource.LIFE)
+
+    def get_abilities(self):
+        def effect1(state, player):
+            player.resources.remove(Resource.LIFE, 4)
+            self.resources_on.add(Resource.LIFE, 1)
+
+        def effect2(state, player):
+            # TODO ici. Si c'est illusionnist faut payer 2 ressources (comme d'hab quand il remplace un dragon)
+            untapped_dragons = [c for c in player.board if not c.is_tapped 
+                                and c.card_type in [CardType.DRAGON, CardType.ILLUSIONIST]]
+            chosen_dragon = player.choose_card(untapped_dragons, state)
+            chosen_dragon.tap()
+            self.resources_on.add(Resource.LIFE, 1)
+        
+        def has_untapped_dragon(_s, player, card):
+            return not card.is_tapped and any(
+                c for c in player.board if not c.is_tapped and c.card_type in [CardType.DRAGON, CardType.ILLUSIONIST]
+            )
+
+        abilities = [Ability(f"4 LIFE pour mettre 1 LIFE sur {self.name}",
+                             cost={Resource.LIFE: 4},
+                             effect=effect1),
+                     Ability(f"Engager un DRAGON pour mettre 1 LIFE sur {self.name}",
+                             cost={},
+                             effect=effect2,
+                             condition=has_untapped_dragon)]
+        return abilities
+
+
+class CrystalFortress(PlaceOfPower):
+    def __init__(self):
+        super().__init__(name="Forteresse de Cristal",
+                         cost={Resource.ELAN: 4,
+                               Resource.LIFE: 4,
+                               Resource.CALM: 4,
+                               Resource.DEATH: 4,
+                               Resource.GOLD: 4})
+    
+    def score(self, state, player):
+        on_board_artefacts = [c for c in player.board if isinstance(c, Artifact)]
+        return 5 + len(on_board_artefacts) // 2
+    
+    def get_abilities(self):
+        def effect1(state, player):
+            self.tap()
+            winner = state.engine.victory_check()
+            if winner:
+                state.engine.game_over = True
+                state.engine.winner = winner
+            else:
+                print("Aucun joueur n'atteint 13 points, la partie continue.")
+
+        return [Ability("Lancer un contrôle de victoire immédiat",
+                        cost={},
+                        effect=effect1)]
+
+
+class HellDoor(PlaceOfPower):
+    def __init__(self):
+        super().__init__(name="Porte des Enfers",
+                         cost={Resource.ELAN: 6,
+                               Resource.DEATH: 3})
+    
+    def score(self, state, player):
+        on_board_demons = [c for c in player.board if c.card_type is CardType.DEMON]
+        return len(on_board_demons) + self.resources_on.get_amount(Resource.DEATH)
+    
+    def get_abilities(self):
+        def effect1(state, player):
+            untapped_demons = [c for c in player.board
+                               if not c.is_tapped
+                               and c.card_type in [CardType.DEMON, CardType.ILLUSIONIST]]
+            chosen_demon = player.choose_card(untapped_demons, state)
+            chosen_demon.tap()
+            self.tap()
+            self.resources_on.add(Resource.DEATH, 1)
+
+        def effect2(state, player):
+            creatures = [c for c in player.board
+                         if c.card_type == CardType.CREATURE]
+            chosen_creature = player.choose_card(creatures, state)
+            player.board.remove(chosen_creature)
+            player.discard.append(chosen_creature)
+            self.resources_on.add(Resource.DEATH, 1)
+        
+        def effect3(state, player):
+            player.resources.remove(Resource.ELAN, 4)
+            self.resources_on.add(Resource.DEATH, 1)
+        
+        def has_untapped_demon(_s, player, card):
+            return not card.is_tapped and any(
+                c for c in player.board if not c.is_tapped and c.card_type in [CardType.DEMON, CardType.ILLUSIONIST]
+            )
+        
+        def has_creature(_s, player, card):
+            return not card.is_tapped and any(c for c in player.board if c.card_type == CardType.CREATURE)
+
+        abilities = [Ability(f"Engager 1 DEMON et {self.name} pour mettre 1 DEATH sur {self.name}",
+                             cost={},
+                             effect=effect1,
+                             condition=has_untapped_demon),
+                     Ability(f"Détruisez une crature pour mettre 1 DEATH sur {self.name}",
+                             cost={},
+                             effect=effect2,
+                             condition=has_creature),
+                     Ability(f"4 ELAN pour mettre 1 DEATH sur {self.name}",
+                             cost={Resource.ELAN: 4},
+                             effect=effect3)]
+        return abilities
+
+
+class AbyssalTemple(PlaceOfPower):
+    def __init__(self):
+        super().__init__(name="Temple des Abysses",
+                         cost={Resource.CALM: 6,
+                               Resource.DEATH: 3})
+    
+    def score(self, state, player):
+        return self.resources_on.get_amount(Resource.CALM)
+    
+    def get_abilities(self):
+        def effect1(state, player):
+            player.resources.remove(Resource.LIFE, 2)
+            for p in state.players:
+                tapped_demons = [c for c in p.board if c.is_tapped and c.card_type is CardType.DEMON]
+                for demon in tapped_demons:
+                    demon.untap()
+            self.tap()
+
+        def effect2(state, player):
+            player.resources.remove(Resource.CALM, 2)
+            player.resources.remove(Resource.DEATH, 2)
+            self.resources_on.add(Resource.CALM, 1)
+
+        def effect3(state, player):
+            untapped_demons = [c for c in player.board
+                               if not c.is_tapped
+                               and c.card_type in [CardType.DEMON, CardType.ILLUSIONIST]]
+            chosen_demon = player.choose_card(untapped_demons, state)
+            chosen_demon.tap()
+            self.resources_on.add(Resource.CALM, 1)
+        
+        def has_untapped_demon(_s, player, card):
+            return not card.is_tapped and any(
+                c for c in player.board if not c.is_tapped and c.card_type in [CardType.DEMON, CardType.ILLUSIONIST]
+            )
+        
+        def has_tapped_demon(_s, player, card):
+            return not card.is_tapped and any(c for c in player.board if c.is_tapped and c.card_type is CardType.DEMON)
+
+        abilities = [Ability(f"2 LIFE pour revive tous les demons",
+                             cost={Resource.LIFE: 2},
+                             effect=effect1,
+                             condition=has_tapped_demon),
+                     Ability(f"2 CALM et 2 DEATH pour mettre 1 CALM sur {self.name}",
+                             cost={Resource.CALM: 2, Resource.DEATH: 2},
+                             effect=effect2),
+                     Ability(f"Engagez un démon pour mettre 1 CALM sur {self.name}",
+                             cost={},
+                             effect=effect3,
+                             condition=has_untapped_demon)]
+        return abilities
+
+
+class SacrificialPit(PlaceOfPower):
+    def __init__(self):
+        super().__init__(name="Puits Sacrificiel",
+                         cost={Resource.ELAN: 8,
+                               Resource.DEATH: 4})
+    
+    def score(self, state, player):
+        return 2 + self.resources_on.get_amount(Resource.DEATH)
+
+    def get_abilities(self):
+        def effect1(state, player):
+            player.resources.remove(Resource.LIFE, 3)
+            self.resources_on.add(Resource.DEATH, 1)
+            self.tap()
+
+        def effect2(state, player):
+            drags_or_creas = [c for c in player.board
+                              if c.card_type in [CardType.CREATURE, CardType.DRAGON]]
+            chosen = player.choose_card(drags_or_creas, state)
+            total_cost = sum(val for _, val in chosen.cost.items())
+
+            player.resources.add(Resource.GOLD, total_cost)
+            player.resources.remove(Resource.DEATH, 1)
+            self.tap()
+        
+        def has_drag_or_crea(_s, player, card):
+            return not card.is_tapped and any(
+                c for c in player.board if c.card_type in [CardType.CREATURE, CardType.DRAGON]
+            )
+
+        abilities = [Ability(f"3 LIFE pour mettre 1 DEATH sur {self.name}",
+                             cost={Resource.LIFE: 3},
+                             effect=effect1),
+                     Ability(f"1 DEATH et détruisez 1 DRAGON/CREATURE: Gagnez son cout en GOLD",
+                             cost={Resource.DEATH: 1},
+                             effect=effect2,
+                             condition=has_drag_or_crea)]
+        return abilities
+
+
 ALL_PLACES_OF_POWER = [MysticalMenagerie(),
                        SacredGrove(),
                        DragonsLair(),
                        DeathCatacomb(),
                        BloodyIsland(),
-                       WizardBestiary()
+                       WizardBestiary(),
+                       AbyssalTemple(),
+                       HellDoor(),
+                       CrystalFortress(),
+                       DragonsCave(),
+                       AlchemistTower(),
+                       AlchemistLaboratory(),
+                       CursedForge(),
+                       DwarfMine(),
+                       SacrificialPit(),
+                       PearlCradle()
                        ]
