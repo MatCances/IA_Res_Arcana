@@ -35,12 +35,12 @@ def test_pioche_3_et_defausse_3(setup):
 
 
 def test_pioche_vide(setup):
-    """Ne fait rien si la pioche est vide"""
+    """Si la pioche est vide, la divination est quand même engagée"""
     state, player, obj, card1, card2, card3 = setup
     player.deck = []
     ability = obj.get_abilities()[0]
     ability.execute(state, player)
-    assert obj.is_tapped == False
+    assert obj.is_tapped == True
 
 
 def test_moins_de_3_cartes(setup):

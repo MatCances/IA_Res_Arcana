@@ -34,13 +34,13 @@ def test_pioche_une_carte(setup):
 
 
 def test_pioche_vide(setup):
-    """Ne fait rien si la pioche est vide"""
+    """Si la pioche est vide on paye quand meme"""
     state, player, augur, card = setup
     player.deck = []
     ability = augur.get_abilities()[0]
     ability.execute(state, player)
-    assert player.resources.resources[Resource.CALM] == 1
-    assert augur in player.board
+    assert player.resources.resources[Resource.CALM] == 0
+    assert augur not in player.board
 
 
 def test_pas_assez_calm(setup):

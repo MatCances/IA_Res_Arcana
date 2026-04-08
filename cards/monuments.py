@@ -87,15 +87,13 @@ class Library(Monument):
     
     def get_abilities(self):
         def effect(state, player):
-            if not player.deck:
-                print(f"{player.name} n'a plus de cartes dans sa pioche.")
-                return
-            card = player.deck.pop(0)
-            player.hand.append(card)
-            print(f"{player.name} pioche {card.name}")
+            player.draw()
             self.tap()
         
-        return [Ability("Piocher une carte", cost={}, effect=effect)]
+        return [Ability("Piocher une carte",
+                        cost={},
+                        effect=effect,
+                        condition=lambda _s, player, _card: bool(player.deck))]
     
     def score(self, state, player):
         return 1
@@ -310,6 +308,7 @@ class Oracle(Monument):
 
             if not deck:
                 print("La pioche est vide !")
+                self.tap()
                 return
 
             # piocher 3 cartes
@@ -333,7 +332,8 @@ class Oracle(Monument):
         
         return [Ability(f"Engager: piocher 3 cartes, les réordonner, les replacer sur la pioche",
                         cost={},
-                        effect=effect)]
+                        effect=effect,
+                        condition=lambda state, player, _card: bool(player.deck) or bool(state.monuments_deck))]
     
     def score(self, state, player):
         return 2

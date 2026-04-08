@@ -52,13 +52,13 @@ def test_reordonne_monuments(setup):
 
 
 def test_pioche_vide(setup):
-    """Rien ne se passe si la pioche est vide"""
+    """Si la pioche est vide, l'oracle est quand meme engagée"""
     state, player, oracle, card1, card2, card3, card4 = setup
     player.deck = []
     with patch('builtins.input', return_value='1'):
         ability = oracle.get_abilities()[0]
         ability.execute(state, player)
-    assert oracle.is_tapped == False
+    assert oracle.is_tapped == True
 
 
 def test_moins_de_3_cartes(setup):

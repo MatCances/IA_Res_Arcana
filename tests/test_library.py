@@ -28,13 +28,13 @@ def test_pioche_carte(setup):
 
 
 def test_pioche_vide(setup):
-    """Rien ne se passe si la pioche est vide"""
+    """Si la pioche est vide, la library est quand meme engagée"""
     state, player, library, card1, card2 = setup
     player.deck = []
     ability = library.get_abilities()[0]
     ability.execute(state, player)
     assert player.hand == []
-    assert library.is_tapped == False
+    assert library.is_tapped == True
 
 
 def test_score(setup):

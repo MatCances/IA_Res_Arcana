@@ -86,6 +86,27 @@ class Player:
         return all(self.resources.has(r, amount)
                    for r, amount in ability.cost.items())
     
+    def draw(self, state=None, deck=None):
+        """Pioche une carte dans un deck (pioche ou monument)
+        et check s'il reste des cartes dans la pioche
+
+        Returns:
+            state: Juste pour le logger
+            deck (List[Card]): le deck dans lequel piocher. Default le deck du joueur
+        """
+        if deck is None:
+            deck = self.deck
+
+        if not deck:
+            print(f"{self.name} Il n'y a plus de carte dans la pioche.")
+            return
+            
+        card = deck.pop(0)
+        self.hand.append(card)
+        if state:
+            state.logger.action(f"{self.name}.draw({card.name})")
+
+    
     @property
     def points(self):
         """Le score du joueur (calculé à chaque accès).

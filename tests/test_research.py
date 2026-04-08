@@ -32,13 +32,14 @@ def test_pioche_une_carte(setup):
 
 
 def test_pioche_vide(setup):
-    """Ne fait rien si la pioche est vide"""
+    """Si la pioche est vide, la recherche est quand même engagée"""
     state, player, obj, card = setup
     player.deck = []
-    ability = obj.get_abilities()[0]
-    ability.execute(state, player)
-    assert obj.is_tapped == False
-    assert player.resources.resources[Resource.ELAN] == 1
+    with patch('builtins.input', return_value='1'):
+        ability = obj.get_abilities()[0]
+        ability.execute(state, player)
+    assert obj.is_tapped == True
+    assert player.resources.resources[Resource.ELAN] == 0
 
 
 def test_pas_assez_ressources(setup):

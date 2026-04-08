@@ -198,12 +198,8 @@ class PlanarShadow(Artifact):
             player.resources.remove(Resource.CALM, 1)
             # piocher 2 cartes
             for _ in range(2):
-                if player.deck:
-                    card = player.deck.pop(0)
-                    player.hand.append(card)
-                    print(f"{player.name} pioche {card.name}")
-                else:
-                    print(f"{player.name} n'a plus de cartes dans sa pioche.")
+                player.draw(state)
+
             # défausser 1 carte de la main
             if player.hand:
                 print("Choisissez une carte à défausser :")
@@ -215,7 +211,10 @@ class PlanarShadow(Artifact):
 
         abilities = [
             Ability("1 LIFE pour 3 CALM", cost={Resource.LIFE: 1}, effect=effect1),
-            Ability("1 CALM pour piocher 2 cartes puis défausser 1", cost={Resource.CALM: 1}, effect=effect2)
+            Ability("1 CALM pour piocher 2 cartes puis défausser 1",
+                    cost={Resource.CALM: 1},
+                    effect=effect2,
+                    condition=lambda _s, player, _card: len(player.deck) > 1)
         ]
         return abilities 
 
@@ -407,17 +406,15 @@ class ElvishBow(Artifact):
             self.tap()
 
         def effect2(state, player):
-            if player.deck:
-                card = player.deck.pop(0)
-                player.hand.append(card)
-                print(f"{player.name} pioche {card.name}")
-            else:
-                print(f"{player.name} n'a plus de cartes dans sa pioche.")
+            player.draw()
             self.tap()
 
         return [
             Ability("Attaquer tous les adversaires (1 dégât)", cost={}, effect=effect1),
-            Ability("Piocher une carte", cost={}, effect=effect2)
+            Ability("Piocher une carte",
+                    cost={},
+                    effect=effect2,
+                    condition=lambda _s, player, _card: bool(player.deck))
         ]
 
 
@@ -1274,12 +1271,7 @@ class SinanCompass(Artifact):
         def effect1(state, player):
             player.resources.remove(Resource.CALM, 4)
             player.resources.add(Resource.PEARL, 1)
-            if not player.deck:
-                print(f"{player.name} n'a plus de cartes dans sa pioche.")
-                return
-            card = player.deck.pop(0)
-            player.hand.append(card)
-            print(f"{player.name} pioche {card.name}")
+            player.draw()
             self.tap()
         
         def effect2(state, player):
@@ -1318,7 +1310,8 @@ class SinanCompass(Artifact):
                              effect=effect1),
                      Ability(f"Engager: piocher 3 cartes, les réordonner, les replacer sur la pioche",
                               cost={},
-                              effect=effect2)]
+                              effect=effect2,
+                              condition=lambda state, player, _card: bool(player.deck) or bool(state.monuments_deck))]
         return abilities
 
 

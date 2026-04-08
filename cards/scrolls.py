@@ -96,18 +96,14 @@ class Augur(Scroll):
     
     def get_abilities(self):
         def effect(state, player):
-            if not player.deck:
-                print(f"{player.name} n'a plus de cartes dans sa pioche.")
-                return
-            
             player.resources.remove(Resource.CALM, 1)
-            card = player.deck.pop(0)
-            player.hand.append(card)
-            print(f"{player.name} pioche {card.name}")
+            player.draw()
             player.board.remove(self)
             state.scrolls.append(self)
         
-        return [Ability("1 CALM pour piocher une carte", cost={Resource.CALM: 1}, effect=effect,
+        return [Ability("1 CALM pour piocher une carte",
+                        cost={Resource.CALM: 1},
+                        effect=effect,
                         condition=lambda _s, player, _card: bool(player.deck))]
 
 

@@ -95,6 +95,7 @@ class Divination(Obj):
             nb = min(3, len(player.deck))
             if nb == 0:
                 print(f"{player.name} n'a plus de cartes dans sa pioche.")
+                self.tap()
                 return
             
             drawn = [player.deck.pop(0) for _ in range(nb)]
@@ -112,7 +113,10 @@ class Divination(Obj):
             
             self.tap()
         
-        return [Ability("Piocher 3 cartes puis défausser 3 cartes", cost={}, effect=effect)]
+        return [Ability("Piocher 3 cartes puis défausser 3 cartes",
+                        cost={},
+                        effect=effect,
+                        condition=lambda _s, player, _card: bool(player.deck))]
 
 
 class Research(Obj):
@@ -121,19 +125,15 @@ class Research(Obj):
     
     def get_abilities(self):
         def effect(state, player):
-            if not player.deck:
-                print(f"{player.name} n'a plus de cartes dans sa pioche.")
-                return
-            
             resource = player.choose_resource(player.resources.available(), state)
             player.resources.remove(resource, 1)
-            
-            card = player.deck.pop(0)
-            player.hand.append(card)
-            print(f"{player.name} pioche {card.name}")
+            player.draw()
             self.tap()
         
-        return [Ability("1 ressource au choix pour piocher une carte", cost={Resource.ANY: 1}, effect=effect)]
+        return [Ability("1 ressource au choix pour piocher une carte",
+                        cost={Resource.ANY: 1},
+                        effect=effect,
+                        condition=lambda _s, player, _card: bool(player.deck))]
 
 
 class Transmutation(Obj):
