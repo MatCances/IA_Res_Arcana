@@ -19,7 +19,7 @@ class Vitality(Scroll):
                 return
             
             print("Choisissez une carte à désengager :")
-            card = player.choose_card(tapped)
+            card = player.choose_card(tapped, state)
             card.untap()
             print(f"{card.name} est désengagée.")
             player.resources.remove(Resource.ELAN, 2)
@@ -39,7 +39,7 @@ class Shield(Scroll):
     def on_event(self, event, state, source_player, **kwargs):
         if event == GameEvent.ATTACK and not self.is_tapped:
             owner = next(p for p in state.players if self in p.board)
-            if owner.choose_yes_no(f"\n[Réaction] {owner.name} : utiliser Parchemin {self.name} ?"):
+            if owner.choose_yes_no(f"\n[Réaction] {owner.name} : utiliser Parchemin {self.name} ?", state):
                 kwargs.get('context')['cancelled'] = True
                 owner.board.remove(self)
                 state.scrolls.append(self)
@@ -71,7 +71,7 @@ class Projection(Scroll):
     def get_abilities(self):
         def effect(state, player):
             print("Choisissez une ressource: ")
-            resource = player.choose_resource(player.resources.available(excluded={Resource.PEARL, Resource.GOLD}))
+            resource = player.choose_resource(player.resources.available(excluded={Resource.PEARL, Resource.GOLD}), state)
             
             max_x = player.resources.get_amount(resource) // 3
             if max_x == 0:
@@ -79,7 +79,7 @@ class Projection(Scroll):
                 return
             
             print("Choisissez le nombre de GOLD à obtenir: ")
-            x = player.choose_number(1, max_x)
+            x = player.choose_number(1, max_x, state)
             
             player.resources.remove(resource, 3 * x)
             player.resources.add(Resource.GOLD, x)
@@ -125,7 +125,7 @@ class Destruction(Scroll):
                 return
             
             print("Choisissez un artefact à détruire :")
-            card = player.choose_card(artifacts)
+            card = player.choose_card(artifacts, state)
             
             # calculer le total du coût
             total = sum(card.cost.values())
@@ -140,7 +140,7 @@ class Destruction(Scroll):
             choices = [r for r in Resource.real() if r not in excluded]
             print(f"Choisissez {total} ressource(s) à recevoir :")
             for _ in range(total):
-                resource = player.choose_resource(choices)
+                resource = player.choose_resource(choices, state)
                 player.resources.add(resource, 1)
             
             player.board.remove(self)
@@ -164,7 +164,7 @@ class Recovery(Scroll):
             
             player.resources.remove(Resource.DEATH, 1)
             print("Choisissez une carte à récupérer :")
-            card = player.choose_card(player.discard)
+            card = player.choose_card(player.discard, state)
             player.discard.remove(card)
             player.hand.append(card)
             print(f"{player.name} récupère {card.name}")
@@ -183,15 +183,15 @@ class Transformation(Scroll):
         def effect(state, player):
 
             print("Choisissez une ressource: ")
-            resource_out = player.choose_resource(player.resources.available(excluded={Resource.PEARL}))
+            resource_out = player.choose_resource(player.resources.available(excluded={Resource.PEARL}), state)
             
             print("Choisissez le nombre à échanger: ")
             max_x = player.resources.get_amount(resource_out)
-            x = player.choose_number(1, max_x)
+            x = player.choose_number(1, max_x, state)
             
             excluded = {Resource.PEARL, Resource.GOLD}
             choices = [r for r in Resource.real() if r not in excluded]
-            resource_in = player.choose_resource(choices)
+            resource_in = player.choose_resource(choices, state)
             
             player.resources.remove(resource_out, x)
             player.resources.add(resource_in, x)

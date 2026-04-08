@@ -1,3 +1,6 @@
+from utils.logger import Logger
+
+
 class GameState:
     """Represente l'etat global de la partie
     """
@@ -16,7 +19,7 @@ class GameState:
         self.monuments_deck = []
         self.objects = []
         self.scrolls = []
-        self.logger = None
+        self.logger = Logger(level=0, silent=True)
 
     def clone(self):
         raise NotImplementedError("clone() est requis pour l'IA")

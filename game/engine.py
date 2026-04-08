@@ -56,7 +56,7 @@ class Engine:
     def _give_starting_resources(self):
         for player in self.state.players:
             for resource in Resource.real():
-                player.resources.add(resource, 11)
+                player.resources.add(resource, 1)
     
     def _setup_board(self):
         self.state.places_of_power = rd.sample(self.available_places_of_power, 4)
@@ -102,7 +102,7 @@ class Engine:
                         continue
 
                     print(f"\n{player.name}, choisissez une carte :")
-                    chosen = player.choose_card(hand)
+                    chosen = player.choose_card(hand, self.state)
                     hand.remove(chosen)
                     player.hand.append(chosen)
                     self.logger.action(
@@ -140,7 +140,7 @@ class Engine:
     def _choose_mages(self):
         for player in self.state.players:
             print(f"\n{player.name}, choisissez votre mage :")
-            chosen_mage = player.choose_card(player.mage_choices)
+            chosen_mage = player.choose_card(player.mage_choices, self.state)
             player.set_mage(chosen_mage)
             player.board.append(chosen_mage)
             self.logger.action(
@@ -155,7 +155,7 @@ class Engine:
         for idx in order:
             player = self.state.players[idx]
             print(f"\n{player.name}, choisissez un objet :")
-            chosen = player.choose_card(self.state.objects)
+            chosen = player.choose_card(self.state.objects, self.state)
             self.state.objects.remove(chosen)
             player.object = chosen
             player.board.append(chosen)
@@ -199,7 +199,7 @@ class Engine:
 
         if reaction_cards:
             options = ["Subir les dégâts"] + [card.name for card in reaction_cards]
-            choice = target.choose_option(options)
+            choice = target.choose_option(options, self.state)
             if choice > 0:
                 chosen = reaction_cards[choice - 1]
                 chosen.on_event(GameEvent.ATTACK, self.state, target, context=attack_context)
@@ -225,7 +225,7 @@ class Engine:
                 if not available:
                     break
                 print(f"{target.name} n'a pas assez de LIFE, choisissez une ressource :")
-                resource = target.choose_resource(available)
+                resource = target.choose_resource(available, self.state)
                 target.resources.remove(resource, 1)
 
     def collect_phase(self):
@@ -242,15 +242,12 @@ class Engine:
                 stored = {r: a for r, a in card.resources_on.resources.items() if a > 0}
                 if not stored:
                     continue
-                print(f"\n{card.name} a des ressources posées dessus :")
-                for r, a in stored.items():
-                    print(f"  - {a} {r.value}")
-                choice = ""
-                while choice not in ["1", "2"]:
-                    print("1 - Tout prendre")
-                    print("2 - Tout laisser")
-                    choice = input("Votre choix : ")
-                if choice == "1":
+                self.logger.state(
+                    f"\n{card.name} a des ressources posées dessus :",
+                    data={"player": player.name, "resources": stored}
+                    )
+
+                if player.choose_yes_no("Tout prendre ?", self.state):
                     for r, a in stored.items():
                         player.resources.add(r, a)
                         card.resources_on.remove(r, a)
@@ -326,7 +323,7 @@ class Engine:
                 )
 
                 actions = self.available_actions(player)
-                action = player.choose_action(actions)
+                action = player.choose_action(actions, self.state)
 
                 self.logger.action(
                     f"{player.name} joue : {action.name}",
@@ -374,7 +371,7 @@ class Engine:
 
         print(f"\n{player.name}, échangez votre objet ({player.object.name}) :")
         old_object = player.object
-        chosen = player.choose_card(self.state.objects)
+        chosen = player.choose_card(self.state.objects, self.state)
         self.state.objects.remove(chosen)
 
         player.object = chosen

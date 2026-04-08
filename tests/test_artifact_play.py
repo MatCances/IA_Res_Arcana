@@ -108,7 +108,7 @@ def test_any_ne_peut_pas_choisir_gold_ni_pearl():
     player.resources.add(Resource.GOLD, 5)
 
     received_choices = []
-    def capture(choices, **_):
+    def capture(choices, *_args, **_):
         received_choices.append(list(choices))
         return choices[0]
 
@@ -153,7 +153,7 @@ def test_reduction_capee_par_max_ressource():
     player.resources.add(Resource.CALM, 2)
 
     received_choices = []
-    def capture(choices, **_):
+    def capture(choices, *_args, **_):
         received_choices.append(list(choices))
         return choices[0]
 

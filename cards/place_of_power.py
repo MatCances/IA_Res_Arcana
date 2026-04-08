@@ -42,12 +42,12 @@ class DragonsLair(PlaceOfPower):
                 return
             
             print("Choisissez un dragon à engager :")
-            card = player.choose_card(dragons)
+            card = player.choose_card(dragons, state)
             
             if card.card_type == CardType.ILLUSIONIST:
                 print("L'Illusionniste imite un dragon : payez 2 ressources :")
                 for _ in range(2):
-                    resource = player.choose_resource(player.resources.available(excluded={Resource.PEARL}))
+                    resource = player.choose_resource(player.resources.available(excluded={Resource.PEARL}), state)
                     player.resources.remove(resource, 1)
             
             card.tap()
@@ -139,25 +139,56 @@ class WizardBestiary(PlaceOfPower):
             # choisir le dragon d'abord
             print("Choisissez un dragon à récupérer :")
             cards = [card for card, _ in dragons]
-            card = player.choose_card(cards)
+            card = player.choose_card(cards, state)
             owner = next(p for c, p in dragons if c == card)
+
+            # Nouveau cout du dragon (cout de base + 4 ANY)
+            card.cost[Resource.ANY] = card.cost.get(Resource.ANY, 0) + 4
             
             # vérifier que le joueur a assez de ressources
-            cout_fixe = sum(card.cost.values())
-            if player.resources.total < 4 + cout_fixe:
+            if not player.can_buy(card):
                 print(f"Pas assez de ressources pour payer les 4 ressources et le coût de {card.name}.")
                 return
-            
-            # payer 4 ressources
-            print("Choisissez 4 ressources à payer :")
-            for _ in range(4):
-                resource = player.choose_resource(player.resources.available(excluded={Resource.PEARL}))
-                player.resources.remove(resource, 1)
-            
-            # payer le coût du dragon
-            for resource, amount in card.cost.items():
-                player.resources.remove(resource, amount)
-            
+
+            reductions = player.get_applicable_reductions(self)
+            total_reduc = sum(r["value"] for r in reductions)
+
+            fixed_cost = {r: a for r, a in card.cost.items() if r != Resource.ANY}
+            any_count = card.cost.get(Resource.ANY, 0)
+            total_fixed = sum(fixed_cost.values())
+            fixed_to_pay = max(0, total_fixed - total_reduc)
+
+            paid_resources = {}
+
+            if not reductions:
+                # Pas de réduction : paiement direct des ressources fixes
+                for r, amount in fixed_cost.items():
+                    player.resources.remove(r, amount)
+                    paid_resources[r.value] = paid_resources.get(r.value, 0) + amount
+            else:
+                # Réduction active : le joueur choisit lesquelles payer, capé par le max du coût
+                if fixed_to_pay > 0:
+                    print(f"Choisissez {fixed_to_pay} ressource(s) à payer pour {card.name} :")
+                    paid = {r: 0 for r in fixed_cost}
+                    for _ in range(fixed_to_pay):
+                        choices = [r for r, cap in fixed_cost.items()
+                                if paid[r] < cap and player.resources.has(r, 1)]
+                        resource = player.choose_resource(choices, state)
+                        player.resources.remove(resource, 1)
+                        paid[resource] += 1
+                        paid_resources[resource.value] = paid_resources.get(resource.value, 0) + 1
+
+            # Payer les slots ANY librement (PEARL), indépendamment des réductions
+            if any_count > 0:
+                print(f"Choisissez {any_count} ressource(s) libres à payer pour {card.name} :")
+                for _ in range(any_count):
+                    choices = [r for r in Resource.real()
+                            if r not in {Resource.PEARL}
+                            and player.resources.has(r, 1)]
+                    resource = player.choose_resource(choices, state)
+                    player.resources.remove(resource, 1)
+                    paid_resources[resource.value] = paid_resources.get(resource.value, 0) + 1
+
             # retirer de la défausse et placer sur le board
             owner.discard.remove(card)
             player.board.append(card)

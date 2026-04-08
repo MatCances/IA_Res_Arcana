@@ -24,7 +24,7 @@ class Obelisc(Monument):
         excluded = {Resource.GOLD, Resource.PEARL}
         choices = [r for r in Resource.real() if r not in excluded]
         for _ in range(6):
-            resource = player.choose_resource(choices)
+            resource = player.choose_resource(choices, state)
             player.resources.add(resource, 1)
     
     def score(self, state, player):
@@ -71,7 +71,7 @@ class ForgottenDomain(Monument):
             if kwargs.get("monument") == self:
                 return
             
-            if owner.choose_yes_no(f"\n[Réaction] {owner.name} : engager {self.name} ? (+1 GOLD sur la carte)"):
+            if owner.choose_yes_no(f"\n[Réaction] {owner.name} : engager {self.name} ? (+1 GOLD sur la carte)", state):
         
                 self.resources_on.add(Resource.GOLD, 1)
                 self.tap()
@@ -112,7 +112,7 @@ class Laboratory(Monument):
                 return
             
             print("Choisissez une ressource à payer :")
-            resource = player.choose_resource(player.resources.available())
+            resource = player.choose_resource(player.resources.available(), state)
             player.resources.remove(resource, 1)
 
             if not player.board:
@@ -120,7 +120,7 @@ class Laboratory(Monument):
                 return
             
             print("Choisissez une carte sur laquelle poser la ressource :")
-            card = player.choose_card(player.board)
+            card = player.choose_card(player.board, state)
             card.resources_on.add(resource, 1)
             print(f"{resource.value} posé sur {card.name}")
             self.tap()
@@ -145,7 +145,7 @@ class DemonicWorkshop(Monument):
     
     def collect_base(self, state, player):
         print(f"{player.name}, choisissez une ressource à collecter (Elan / Death) :")
-        resource = player.choose_resource([Resource.ELAN, Resource.DEATH])
+        resource = player.choose_resource([Resource.ELAN, Resource.DEATH], state)
         player.resources.add(resource, 1)
     
     def get_abilities(self):
@@ -156,7 +156,7 @@ class DemonicWorkshop(Monument):
                 return
             player.resources.remove(Resource.GOLD, 1)
             print("Choisissez une carte à désengager :")
-            card = player.choose_card(tapped)
+            card = player.choose_card(tapped, state)
             card.untap()
             print(f"{card.name} est désengagée.")
             self.tap()
@@ -190,7 +190,7 @@ class Mausoleum(Monument):
     def get_abilities(self):
         def effect(state, player):
             print("Choisissez une ressource à payer :")
-            resource = player.choose_resource(player.resources.available())
+            resource = player.choose_resource(player.resources.available(), state)
             player.resources.remove(resource, 1)
             self.resources_on.add(Resource.DEATH, 1)
             print(f"1 DEATH posé sur le Mausolée.")
@@ -211,7 +211,7 @@ class HangingGarden(Monument):
         print(f"{self.name} : choisissez 3 ressource à collecter :")
 
         for _ in range(3):
-            resource = player.choose_resource(choices)
+            resource = player.choose_resource(choices, state)
             player.resources.add(resource, 1)
 
 
@@ -242,7 +242,7 @@ class Colossus(Monument):
     def get_abilities(self):
         def effect(state, player):
             print("Choisissez une ressource à payer :")
-            resource = player.choose_resource(player.resources.available())
+            resource = player.choose_resource(player.resources.available(), state)
             player.resources.remove(resource, 1)
             self.resources_on.add(Resource.GOLD, 1)
             print(f"1 GOLD posé sur le Colosse.")
@@ -286,7 +286,7 @@ class GreatWall(Monument):
             if not owner.resources.has(Resource.ELAN, 1):
                 return
             
-            if owner.choose_yes_no(f"\n[Réaction] {owner.name} : utiliser {self.name} ? (1 ELAN)"):
+            if owner.choose_yes_no(f"\n[Réaction] {owner.name} : utiliser {self.name} ? (1 ELAN)", state):
                 owner.resources.remove(Resource.ELAN, 1)
                 kwargs.get('context')['cancelled'] = True
                 print(f"[Réaction] {self.name} : attaque annulée !")
@@ -302,7 +302,7 @@ class Oracle(Monument):
     def get_abilities(self):
         def effect(state, player):
             options = ["Votre pioche", "La pioche des monuments"]
-            choice = player.choose_option(options)
+            choice = player.choose_option(options, state)
             if choice == 0:
                 deck = player.deck
             else:
@@ -322,7 +322,7 @@ class Oracle(Monument):
             remaining = drawn[:]
             while remaining:
                 print(f"Choisissez la carte à placer en position {len(reordered) + 1} :")
-                card = player.choose_card(remaining)
+                card = player.choose_card(remaining, state)
                 reordered.append(card)
                 remaining.remove(card)
 
@@ -352,7 +352,7 @@ class Temple(Monument):
         if event == GameEvent.ATTACK and not self.is_tapped:
             owner = next(p for p in state.players if self in p.board)
 
-            if owner.choose_yes_no(f"\n[Réaction] {owner.name} : engager {self.name} ?"):
+            if owner.choose_yes_no(f"\n[Réaction] {owner.name} : engager {self.name} ?", state):
                 self.tap()
                 kwargs.get('context')['cancelled'] = True
                 print(f"[Réaction] {self.name} : attaque annulée !")
@@ -376,9 +376,9 @@ class ImpiousCathedral(Monument):
             if not demons:
                 return
             
-            if owner.choose_yes_no(f"\n[Réaction] {owner.name} : activer {self.name} ? (s'engage + engage un démon, +1 point)"):
+            if owner.choose_yes_no(f"\n[Réaction] {owner.name} : activer {self.name} ? (s'engage + engage un démon, +1 point)", state):
                 print("Choisissez un démon à engager :")
-                demon = owner.choose_card(demons)
+                demon = owner.choose_card(demons, state)
                 self.tap()
                 demon.tap()
                 owner.bonus_points += 1
@@ -400,7 +400,7 @@ class SacredStatue(Monument):
             if not owner.resources.has(Resource.GOLD, 3):
                 return
             
-            if owner.choose_yes_no(f"\n[Réaction] {owner.name} : activer {self.name} ? (3 GOLD → +3 points, s'engage)"):
+            if owner.choose_yes_no(f"\n[Réaction] {owner.name} : activer {self.name} ? (3 GOLD → +3 points, s'engage)", state):
                 owner.resources.remove(Resource.GOLD, 3)
                 owner.bonus_points += 3
                 self.tap()

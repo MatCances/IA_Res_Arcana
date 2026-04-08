@@ -33,7 +33,7 @@ def test_collect_base_choices_est_indexable(setup):
     """Vérifie que choose_resource reçoit bien une liste (pas un set)."""
     state, player, witch = setup
     received = []
-    def capture(choices, **_):
+    def capture(choices, *_args, **_):
         received.append(choices)
         return choices[0]
     with patch.object(player, 'choose_resource', side_effect=capture):

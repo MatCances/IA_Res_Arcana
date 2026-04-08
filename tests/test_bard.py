@@ -33,7 +33,7 @@ def test_effet1_pas_gold_ni_pearl(setup):
     """GOLD et PEARL ne sont pas proposés."""
     state, player, bard = setup
     received_choices = []
-    def capture(choices, **_):
+    def capture(choices, *_args, **_):
         received_choices.append(list(choices))
         return choices[0]
 

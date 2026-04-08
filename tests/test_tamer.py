@@ -79,7 +79,7 @@ def test_pas_gold_ni_pearl_disponibles(setup):
     player.board.append(creature)
 
     received_choices = []
-    def capture(choices, **_):
+    def capture(choices, *_args, **_):
         received_choices.append(list(choices))
         return choices[0]
 

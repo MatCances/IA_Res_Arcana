@@ -36,7 +36,7 @@ class Artifact(Card):
                 for _ in range(fixed_to_pay):
                     choices = [r for r, cap in fixed_cost.items()
                                if paid[r] < cap and player.resources.has(r, 1)]
-                    resource = player.choose_resource(choices)
+                    resource = player.choose_resource(choices, state)
                     player.resources.remove(resource, 1)
                     paid[resource] += 1
                     paid_resources[resource.value] = paid_resources.get(resource.value, 0) + 1
@@ -48,7 +48,7 @@ class Artifact(Card):
                 choices = [r for r in Resource.real()
                            if r not in {Resource.GOLD, Resource.PEARL}
                            and player.resources.has(r, 1)]
-                resource = player.choose_resource(choices)
+                resource = player.choose_resource(choices, state)
                 player.resources.remove(resource, 1)
                 paid_resources[resource.value] = paid_resources.get(resource.value, 0) + 1
 
@@ -73,16 +73,29 @@ class Artifact(Card):
         player.discard.append(self)
 
         options = ["Recevoir 2 ressources", "Recevoir 1 GOLD"]
-        choix = player.choose_option(options)
+        choix = player.choose_option(options, state)
+
+        gained_resources = {}
 
         if choix == 1:
             player.resources.add(Resource.GOLD, 1)
+            gained_resources[Resource.GOLD.value] = 1
         elif choix == 0:
             for _ in range(2):
-                resource = player.choose_resource([r for r in Resource.real() if r not in {Resource.PEARL, Resource.GOLD}])
+                resource = player.choose_resource([r for r in Resource.real()
+                                                   if r not in {Resource.PEARL, Resource.GOLD}],
+                                                   state)
                 player.resources.add(resource, 1)
+                gained_resources[resource.value] = gained_resources.get(resource.value, 0) + 1
         else:
             raise ValueError("This must never happend")
+        
+        state.logger.decision(
+            f"{player.name} reçoit {gained_resources} en défaussant {self.name}",
+            data={"player": player.name, "card": self.name, "gained": gained_resources}
+            )
+        
+        
 
 
 class Phoenix(Artifact):
@@ -108,26 +121,26 @@ class Prism(Artifact):
     def get_abilities(self):
         def effect1(state, player):
             print("Choisissez 1 ressource à payer :")
-            resource = player.choose_resource(player.resources.available(excluded={Resource.PEARL}))
+            resource = player.choose_resource(player.resources.available(excluded={Resource.PEARL}), state)
             player.resources.remove(resource, 1)
             print("Choisissez 2 ressources à recevoir :")
             for _ in range(2):
-                r = player.choose_resource([r for r in Resource.real() if r not in [Resource.PEARL, Resource.GOLD]])
+                r = player.choose_resource([r for r in Resource.real() if r not in [Resource.PEARL, Resource.GOLD]], state)
                 player.resources.add(r, 1)
             self.tap()
         
         def effect2(state, player):
 
             print("Choisissez une ressource: ")
-            resource_out = player.choose_resource(player.resources.available(excluded={Resource.PEARL}))
+            resource_out = player.choose_resource(player.resources.available(excluded={Resource.PEARL}), state)
             
             print("Choisissez le nombre à échanger: ")
             max_x = player.resources.get_amount(resource_out)
-            x = player.choose_number(1, max_x)
+            x = player.choose_number(1, max_x, state)
             
             excluded = {Resource.PEARL, Resource.GOLD}
             choices = [r for r in Resource.real() if r not in excluded]
-            resource_in = player.choose_resource(choices)
+            resource_in = player.choose_resource(choices, state)
             
             player.resources.remove(resource_out, x)
             player.resources.add(resource_in, x)
@@ -152,10 +165,10 @@ class LightFlask(Artifact):
     def on_event(self, event, state, source_player, **kwargs):
         if event == GameEvent.DESTROY_ARTIFACT:
             owner = next(p for p in state.players if self in p.board)
-            if owner.choose_yes_no(f"[Réaction] Voulez-vous activer {self.name} ?"):
+            if owner.choose_yes_no(f"[Réaction] Voulez-vous activer {self.name} ?", state):
                 excluded = {Resource.DEATH, Resource.GOLD, Resource.PEARL}
                 choices = [r for r in Resource.real() if r not in excluded]
-                resource = owner.choose_resource(choices)
+                resource = owner.choose_resource(choices, state)
                 owner.resources.add(resource, 1)
 
     def get_abilities(self):
@@ -194,7 +207,7 @@ class PlanarShadow(Artifact):
             # défausser 1 carte de la main
             if player.hand:
                 print("Choisissez une carte à défausser :")
-                card = player.choose_card(player.hand)
+                card = player.choose_card(player.hand, state)
                 player.hand.remove(card)
                 player.discard.append(card)
                 print(f"{player.name} défausse {card.name}")
@@ -233,7 +246,7 @@ class ElementaryShard(Artifact):
             print("Choisissez une ressource à produire :")
             excluded = {Resource.GOLD, Resource.PEARL}
             choices = [r for r in Resource.real() if r not in excluded]
-            resource = player.choose_resource(choices)
+            resource = player.choose_resource(choices, state)
             player.resources.add(resource, 1)
             self.tap()
 
@@ -270,7 +283,7 @@ class Trident(Artifact):
     def collect_base(self, state, player):
         choices = [Resource.LIFE, Resource.CALM]  # CALM et LIFE
         print("Trident : choisissez une ressource à collecter (CALM ou LIFE) :")
-        resource = player.choose_resource(choices)
+        resource = player.choose_resource(choices, state)
         player.resources.add(resource, 1)
 
     def get_abilities(self):
@@ -285,7 +298,7 @@ class Trident(Artifact):
             choices = [r for r in Resource.real() if r not in excluded]
             print("Choisissez 6 ressources à poser sur le Trident :")
             for _ in range(6):
-                resource = player.choose_resource(choices)
+                resource = player.choose_resource(choices, state)
                 self.resources_on.add(resource, 1)
             # Ne s'engage pas
 
@@ -317,7 +330,7 @@ class DragonEgg(Artifact):
                 return
 
             print("Choisissez un dragon à poser :")
-            dragon = player.choose_card(dragons)
+            dragon = player.choose_card(dragons, state)
             dragon.play(state, player)
 
             # Se détruit : quitte le board et va en défausse
@@ -342,7 +355,7 @@ class BoneDragon(Artifact):
             for target in targets:
                 # proposer l'esquive avec 1 DEATH
                 if target.resources.has(Resource.DEATH, 1):
-                    if target.choose_yes_no(f"\n{target.name}, esquiver en payant 1 DEATH ?"):
+                    if target.choose_yes_no(f"\n{target.name}, esquiver en payant 1 DEATH ?", state):
                         target.resources.remove(Resource.DEATH, 1)
                         print(f"{target.name} esquive l'attaque !")
                         continue  # continue la boucle directement ici
@@ -373,7 +386,7 @@ class ElementarySource(Artifact):
             owner = next(p for p in state.players if self in p.board)
             if not owner.resources.has(Resource.CALM, 1):
                 return
-            if owner.choose_yes_no(f"Voulez-vous activer {self.name} ? (1 CALM)"):
+            if owner.choose_yes_no(f"Voulez-vous activer {self.name} ? (1 CALM)", state):
                 owner.resources.remove(Resource.CALM, 1)
                 kwargs.get('context')['cancelled'] = True
 
@@ -423,7 +436,7 @@ class Automate(Artifact):
     def get_abilities(self):
         def effect(state, player):
             print("Choisissez une ressource à mettre sur l'automate: ")
-            resource = player.choose_resource(player.resources.available())
+            resource = player.choose_resource(player.resources.available(), state)
             self.resources_on.add(resource, 1)
             player.resources.remove(resource, 1)
             self.tap()
@@ -453,7 +466,7 @@ class Siren(Artifact):
             
             excluded = {Resource.PEARL, Resource.DEATH, Resource.ELAN}
             print("Choisissez une ressource à payer :")
-            resource = player.choose_resource(player.resources.available(excluded))
+            resource = player.choose_resource(player.resources.available(excluded), state)
             player.resources.remove(resource, 1)
 
             if not player.board:
@@ -461,7 +474,7 @@ class Siren(Artifact):
                 return
             
             print("Choisissez une carte sur laquelle poser la ressource :")
-            card = player.choose_card(player.board)
+            card = player.choose_card(player.board, state)
             card.resources_on.add(resource, 1)
             print(f"{resource.value} posé sur {card.name}")
             self.tap()
@@ -484,7 +497,7 @@ class Homonculus(Artifact):
             excluded = {Resource.GOLD, Resource.PEARL}
             choices = [r for r in Resource.real() if r not in excluded]
             for _ in range(2):
-                resource = player.choose_resource(choices)
+                resource = player.choose_resource(choices, state)
                 self.resources_on.add(resource, 1)
             self.tap()
 
@@ -506,7 +519,7 @@ class PrismaticDragon(Artifact):
     def collect_base(self, state, player):
         excluded = {Resource.PEARL, Resource.GOLD, Resource.DEATH}
         choices = [r for r in Resource.real() if r not in excluded]
-        resource = player.choose_resource(choices)
+        resource = player.choose_resource(choices, state)
         player.resources.add(resource, 1)
     
     def get_abilities(self):
@@ -515,7 +528,7 @@ class PrismaticDragon(Artifact):
             excluded = {Resource.GOLD, Resource.PEARL}
             choices = [r for r in Resource.real() if r not in excluded]
             for _ in range(4):
-                resource = player.choose_resource(choices)
+                resource = player.choose_resource(choices, state)
                 self.resources_on.add(resource, 1)
             self.tap()
 
@@ -540,7 +553,7 @@ class DurtDragon(Artifact):
             for target in targets:
                 # proposer l'esquive avec 1 GOLD
                 if target.resources.has(Resource.GOLD, 1):
-                    if target.choose_yes_no(f"\n{target.name}, esquiver en payant 1 GOLD ?"):
+                    if target.choose_yes_no(f"\n{target.name}, esquiver en payant 1 GOLD ?", state):
                         target.resources.remove(Resource.GOLD, 1)
                         print(f"{target.name} esquive l'attaque !")
                         continue
@@ -570,7 +583,7 @@ class Dolfin(Artifact):
             if not owner.resources.has(Resource.CALM, 1):
                 return
             
-            if owner.choose_yes_no(f"\n[Réaction] {owner.name} : utiliser {self.name} ? (1 CALM)"):
+            if owner.choose_yes_no(f"\n[Réaction] {owner.name} : utiliser {self.name} ? (1 CALM)", state):
                 owner.resources.remove(Resource.CALM, 1)
                 kwargs.get('context')['cancelled'] = True
                 print(f"[Réaction] {self.name} : attaque annulée !")
@@ -631,14 +644,14 @@ class Shrivatsa(Artifact):
         if Resource.PEARL in self.resources_on.available():
             
             options = ["Recevoir 2 ressources", "Recevoir 1 GOLD"]
-            choix = player.choose_option(options)
+            choix = player.choose_option(options, state)
 
             if choix == 1:
                 player.resources.add(Resource.GOLD, 1)
             elif choix == 0:
                 for _ in range(2):
                     resource = player.choose_resource([r for r in Resource.real()
-                                                       if r not in {Resource.PEARL, Resource.GOLD}])
+                                                       if r not in {Resource.PEARL, Resource.GOLD}], state)
                     player.resources.add(resource, 1)
     
     def get_abilities(self):
@@ -670,7 +683,7 @@ class FireChalice(Artifact):
                 return
             
             print("Choisissez une carte à désengager: ")
-            card = player.choose_card(tapped)
+            card = player.choose_card(tapped, state)
             card.untap()
             self.tap()
 
@@ -691,7 +704,7 @@ class Moloss(Artifact):
     def on_event(self, event, state, source_player, **kwargs):
         if event == GameEvent.ATTACK:
             owner = next(p for p in state.players if self in p.board)
-            if owner.choose_yes_no(f"\n[Réaction] {owner.name} : engager {self.name} ?"):
+            if owner.choose_yes_no(f"\n[Réaction] {owner.name} : engager {self.name} ?", state):
                 kwargs.get('context')['cancelled'] = True
                 self.tap()
 
@@ -722,7 +735,7 @@ class FireDragon(Artifact):
             for target in targets:
                 # proposer l'esquive avec 1 CALM
                 if target.resources.has(Resource.CALM, 1):
-                    if target.choose_yes_no(f"\n{target.name}, esquiver en payant 1 CALM ?"):
+                    if target.choose_yes_no(f"\n{target.name}, esquiver en payant 1 CALM ?", state):
                         target.resources.remove(Resource.CALM, 1)
                         print(f"{target.name} esquive l'attaque !")
                         continue
@@ -752,7 +765,7 @@ class KeenSword(Artifact):
             if not owner.resources.has(Resource.ELAN, 1):
                 return
             
-            if owner.choose_yes_no(f"\n[Réaction] {owner.name} : activer {self.name} ? (-1 ELAN, +1 DEATH sur la carte)"):
+            if owner.choose_yes_no(f"\n[Réaction] {owner.name} : activer {self.name} ? (-1 ELAN, +1 DEATH sur la carte)", state):
                 owner.resources.remove(Resource.ELAN, 1)
                 self.resources_on.add(Resource.DEATH, 1)
                 kwargs.get('context')['cancelled'] = True
@@ -781,7 +794,7 @@ class GoldLion(Artifact):
             if not owner.resources.has(Resource.ELAN, 1):
                 return
             
-            if owner.choose_yes_no(f"\n[Réaction] {owner.name} : engager {self.name} ?"):
+            if owner.choose_yes_no(f"\n[Réaction] {owner.name} : engager {self.name} ?", state):
                 self.tap()
                 kwargs.get('context')['cancelled'] = True
                 print(f"[Réaction] {self.name} : attaque annulée !")
@@ -804,7 +817,7 @@ class LifeChalice(Artifact):
             if not owner.resources.has(Resource.ELAN, 1):
                 return
             
-            if owner.choose_yes_no(f"\n[Réaction] {owner.name} : engager {self.name} ?"):
+            if owner.choose_yes_no(f"\n[Réaction] {owner.name} : engager {self.name} ?", state):
                 self.tap()
                 kwargs.get('context')['cancelled'] = True
                 print(f"[Réaction] {self.name} : attaque annulée !")
@@ -858,7 +871,7 @@ class CursedSkull(Artifact):
             excluded = [Resource.PEARL, Resource.GOLD, Resource.LIFE]
             choices = [r for r in Resource.real() if r not in excluded]
             for _ in range(3):
-                resource = player.choose_resource(choices)
+                resource = player.choose_resource(choices, state)
                 self.resources_on.add(resource, 1)
         
         abilities = [Ability(f"1 LIFE pour mettre 3 ressources sur {self.name} (sauf LIFE, GOLD)",
@@ -887,7 +900,7 @@ class OldDragon(Artifact):
                     options.append("Esquiver en payant 1 PEARL")
                 options.append("Ne pas esquiver")
 
-                choice = target.choose_option(options)
+                choice = target.choose_option(options, state)
                 chosen = options[choice]
                 if chosen == "Esquiver en payant 2 GOLD":
                     target.resources.remove(Resource.GOLD, 2)
@@ -924,7 +937,7 @@ class DragonTeeth(Artifact):
                 return
 
             print("Choisissez un dragon à poser à 0 :")
-            dragon = player.choose_card(dragons)
+            dragon = player.choose_card(dragons, state)
             player.board.append(dragon)
             player.hand.remove(dragon)
             print(f"{player.name} joue {dragon.name} à 0.")
@@ -991,7 +1004,7 @@ class DwarfKing(Artifact):
                 print("Aucun dragon disponibles")
                 return
             print(f"Choisissez un dragon à engager avec {self.name}")
-            dragon = player.choose_card(available_dragons)
+            dragon = player.choose_card(available_dragons, state)
             dragon.tap()
             self.tap()
             print(f"{player.name} engage {self.name} avec {dragon.name}: +1 GOLD sur {self.name}")
@@ -1043,7 +1056,7 @@ class ChaosGremlin(Artifact):
                 return
 
             print(f"Choisissez un démon à désengager avec {self.name}")
-            demon = player.choose_card(tapped_demons)
+            demon = player.choose_card(tapped_demons, state)
 
             player.resources.remove(Resource.LIFE, 1)
             demon.untap()
@@ -1116,13 +1129,13 @@ class WarConch(Artifact):
                 print("Aucun Artefact dans votre jeu")
                 return
             print("Choisissez un artefact à détruire")
-            art = player.choose_card(available_artifacts)
+            art = player.choose_card(available_artifacts, state)
             
             art_cost = sum(art.cost.values())
             excluded = [Resource.PEARL, Resource.GOLD]
             choices = [r for r in Resource.real() if r not in excluded]
             for _ in range(art_cost + 2):
-                res = player.choose_resource(choices)
+                res = player.choose_resource(choices, state)
                 player.resources.add(res, 1)
 
             self.tap()
@@ -1166,9 +1179,9 @@ class SeaSnake(Artifact):
                 # proposer l'esquive en détruisant un artefact
                 available_artifacts = [c for c in target.board if isinstance(c, Artifact)]
                 if available_artifacts:
-                    if target.choose_yes_no(f"\n{target.name}, esquiver en détruisant un Artefact ?"):
+                    if target.choose_yes_no(f"\n{target.name}, esquiver en détruisant un Artefact ?", state):
                         print(f"{target.name} choisissez un Artefact à détruire")
-                        art = player.choose_card(available_artifacts)
+                        art = player.choose_card(available_artifacts, state)
                         art.destroy(state, target)
                         continue
                 
@@ -1191,7 +1204,7 @@ class HeavenlyMount(Artifact):
         choices = [r for r in Resource.real() if r not in excluded]
         print("Choisissez 2 ressources:")
         for _ in range(2):
-            res = player.choose_resource(choices)
+            res = player.choose_resource(choices, state)
             player.resources.add(res, 1)
 
 
@@ -1206,7 +1219,7 @@ class Cornucopia(Artifact):
             choices = [r for r in Resource.real() if r not in excluded]
             print("Choisissez 3 ressources")
             for _ in range(3):
-                res = player.choose_resource(choices)
+                res = player.choose_resource(choices, state)
                 player.resources.add(res, 1)
             self.tap()
         
@@ -1235,7 +1248,7 @@ class Vault(Artifact):
             excluded = [Resource.PEARL, Resource.GOLD]
             choices = [r for r in Resource.real() if r not in excluded]
             for _ in range(2):
-                res = player.choose_resource(choices)
+                res = player.choose_resource(choices, state)
                 player.resources.add(res, 1)
     
     def get_abilities(self):
@@ -1271,7 +1284,7 @@ class SinanCompass(Artifact):
         
         def effect2(state, player):
             options = ["Votre pioche", "La pioche des monuments"]
-            choice = player.choose_option(options)
+            choice = player.choose_option(options, state)
             if choice == 0:
                 deck = player.deck
             else:
@@ -1291,7 +1304,7 @@ class SinanCompass(Artifact):
             remaining = drawn[:]
             while remaining:
                 print(f"Choisissez la carte à placer en position {len(reordered) + 1} :")
-                card = player.choose_card(remaining)
+                card = player.choose_card(remaining, state)
                 reordered.append(card)
                 remaining.remove(card)
 
@@ -1322,7 +1335,7 @@ class LifeTree(Artifact):
             if not owner.resources.has(Resource.LIFE, 1):
                 return
             
-            if owner.choose_yes_no(f"\n[Réaction] {owner.name} : activer {self.name} ? (1 LIFE)"):
+            if owner.choose_yes_no(f"\n[Réaction] {owner.name} : activer {self.name} ? (1 LIFE)", state):
                 owner.resources.remove(Resource.LIFE, 1)
                 kwargs.get('context')['cancelled'] = True
                 print(f"[Réaction] {self.name} : attaque annulée !")
@@ -1358,7 +1371,7 @@ class SeaDragon(Artifact):
             for target in targets:
                 # proposer l'esquive avec 1 ELAN
                 if target.resources.has(Resource.ELAN, 1):
-                    if target.choose_yes_no(f"\n{target.name}, esquiver en payant 1 ELAN ?"):
+                    if target.choose_yes_no(f"\n{target.name}, esquiver en payant 1 ELAN ?", state):
                         target.resources.remove(Resource.ELAN, 1)
                         print(f"{target.name} esquive l'attaque !")
                         continue
@@ -1387,9 +1400,9 @@ class WindDragon(Artifact):
                 # proposer l'esquive en défaussant une carte
                 available_cards = [c for c in target.hand]
                 if available_cards:
-                    if target.choose_yes_no(f"\n{target.name}, esquiver en défaussant une carte ?"):
+                    if target.choose_yes_no(f"\n{target.name}, esquiver en défaussant une carte ?", state):
                         print(f"{target.name} choisissez une carte à défausser")
-                        art = target.choose_card(available_cards)
+                        art = target.choose_card(available_cards, state)
                         art.discard(state, target)
                         continue
                 
@@ -1420,14 +1433,14 @@ class RitualDagger(Artifact):
                 return
 
             print("Choisissez une carte à défausser:")
-            card = player.choose_card(available_cards)
+            card = player.choose_card(available_cards, state)
             card_cost = sum(card.cost.values())
 
             excluded = [Resource.PEARL, Resource.GOLD]
             choices = [r for r in Resource.real() if r not in excluded]
             print(f"Choisissez {card_cost} ressources:")
             for _ in range(card_cost):
-                res = player.choose_resource(choices)
+                res = player.choose_resource(choices, state)
                 player.resources.add(res, 1)
             
             print(f"{player.name} obtient {card_cost} ressources")
@@ -1485,13 +1498,13 @@ class DestructionVortex(Artifact):
                 print("Aucun Artefact à détruire dans votre jeu")
                 return
             print("Choisissez un artefact à détruire")
-            art = player.choose_card(available_artifacts)
+            art = player.choose_card(available_artifacts, state)
             
             art_cost = sum(art.cost.values())
             excluded = [Resource.PEARL, Resource.GOLD]
             choices = [r for r in Resource.real() if r not in excluded]
             for _ in range(art_cost + 2):
-                res = player.choose_resource(choices)
+                res = player.choose_resource(choices, state)
                 player.resources.add(res, 1)
 
             self.tap()
@@ -1526,7 +1539,7 @@ class IvoryAwl(Artifact):
                 return
 
             print("Choisissez une carte à poser :")
-            card = player.choose_card(available_cards)
+            card = player.choose_card(available_cards, state)
             card.play(state, player)
 
             # On retire la réduction temporaire

@@ -10,9 +10,9 @@ from cards.monuments import ALL_MONUMENTS
 from cards.scrolls import ALL_SCROLLS
 
 if __name__ == "__main__":
-    players = [AIPlayer("IA-1"), AIPlayer("IA-2")]
+    players = [AIPlayer("IA-Zib"), AIPlayer("IA-Kanss")]
 
-    logger = Logger(level=2, silent=False)
+    logger = Logger(level=3, silent=False)
 
     engine = Engine(
         players=players,
@@ -27,5 +27,5 @@ if __name__ == "__main__":
 
     engine.run()
 
-    logger.save("logs/partie_ai", fmt="both")
-    print(f"Partie terminée. Logs sauvegardés dans logs/partie_ai.log et logs/partie_ai.json")
+    logger.save("logs/partie_ai", fmt="text")
+    print(f"Partie terminée. Logs sauvegardés dans logs/partie_ai.log") #et logs/partie_ai.json")
